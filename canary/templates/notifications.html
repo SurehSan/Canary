@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Notifications{% endblock %}
+{% block content %}
+<h1>Notifications <span class="tag sim">Test mode</span></h1>
+<div class="notice">Test mode only: there is no production mode. Every subject starts with <code>{{ SUBJECT_PREFIX }}</code>
+  and every body carries a test-mode notice. Only addresses on the local allowlist can receive email; any other
+  recipient is rejected before an SMTP connection is made. If sending is impossible or fails, the message stays
+  <strong>Blocked</strong>, <strong>Rejected</strong>, or <strong>Failed</strong>. There is no mock inbox.</div>
+
+<div class="grid-2">
+  <section class="card">
+    <h2>Delivery configuration</h2>
+    <dl class="kv">
+      <dt>SMTP</dt><dd>{% if smtp_ok %}<span class="state healthy">{{ smtp_msg }}</span>{% else %}<span class="state failed">Blocked</span> — {{ smtp_msg }}{% endif %}</dd>
+      <dt>Credentials</dt><dd>{{ 'Password set in local environment (never shown)' if has_password else 'No password in environment' }}</dd>
+      <dt>Allowlist</dt><dd>{% if allowlist %}{{ allowlist|join(', ') }}{% else %}<span class="state failed">Empty — every recipient is rejected</span>{% endif %}
+        <div class="small muted">Set in the local environment (<code>CANARY_EMAIL_ALLOWLIST</code>); it cannot be edited in the app.</div></dd>
+      <dt>Cadence</dt><dd>P1 immediate · P2 next local processing cycle (every minute while running, or “Run processing cycle”) · P3/P4 daily digest. Collection cadence is separate (hourly).</dd>
+      <dt>Failure simulation</dt><dd>{% if simulate %}<span class="tag sim">ON — sends fail without contacting SMTP</span>{% else %}Off{% endif %}</dd>
+    </dl>
+    {% if g.role == 'admin' %}
+    <div class="actions">
+      <form method="post" action="{{ url_for('main.process_notifications') }}"><button class="btn primary small">Run processing cycle (P1/P2)</button></form>
+      <form method="post" action="{{ url_for('main.run_digest') }}"><button class="btn small">Process daily digest (P3/P4)</button></form>
+      <form method="post" action="{{ url_for('main.toggle_delivery_failure') }}"><button class="btn small ghost">{{ 'End simulated failure' if simulate else 'Simulate delivery failure' }}</button></form>
+    </div>
+    <form method="post" action="{{ url_for('main.test_notification') }}" class="inline-form" style="margin-top:.8rem">
+      <input name="email" type="email" placeholder="address for a delivery check" required>
+      <button class="btn small">Send delivery check</button>
+    </form>
+    <p class="small muted">Use the delivery check to show that an address off the allowlist is rejected before sending.</p>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h2>Recipients and routing</h2>
+    <p class="small muted">Fictional people are mapped to team-owned test addresses. A member receives an alert only when a routing rule names them.</p>
+    <table class="tbl">
+      <thead><tr><th>Member</th><th>Test address</th><th>Allowlist</th></tr></thead>
+      <tbody>{% for m in members %}
+        <tr><td>{{ m.display_name }}<div class="small muted">{{ ROLE_LABELS[m.role] }}</div></td>
+          <td>{% if g.role == 'admin' %}
+            <form method="post" action="{{ url_for('main.set_recipient') }}" class="inline-form">
+              <input type="hidden" name="user_id" value="{{ m.id }}">
+              <input name="email" type="email" value="{{ m.email or '' }}" placeholder="none">
+              <button class="btn small">Save</button></form>
+            {% else %}{{ m.email or '—' }}{% endif %}</td>
+          <td>{% if not m.email %}<span class="muted">—</span>{% elif check_recipient(m.email, allow) %}<span class="state failed">Not allowed</span>{% else %}<span class="state healthy">Allowed</span>{% endif %}</td></tr>
+      {% endfor %}</tbody>
+    </table>
+    <h3>Routing rules</h3>
+    <ul class="plain">{% for r in rules %}
+      <li>{{ r.category|capitalize }} alerts → <strong>{{ r.display_name }}</strong>
+        {% if g.role == 'admin' %}<form method="post" action="{{ url_for('main.delete_rule', rule_id=r.id) }}" style="display:inline"><button class="link">remove</button></form>{% endif %}</li>
+    {% else %}<li class="muted">No routing rules: nobody is notified.</li>{% endfor %}</ul>
+    {% if g.role == 'admin' %}
+    <form method="post" action="{{ url_for('main.add_rule') }}" class="inline-form">
+      <select name="category"><option value="cybersecurity">Cybersecurity</option></select>
+      <select name="user_id">{% for m in members %}<option value="{{ m.id }}">{{ m.display_name }}</option>{% endfor %}</select>
+      <button class="btn small">Add rule</button>
+    </form>
+    {% endif %}
+  </section>
+</div>
+
+<section class="card">
+  <h2>Delivery log</h2>
+  <div class="table-wrap"><table class="tbl">
+    <thead><tr><th>When</th><th>Type</th><th>Priority / cadence</th><th>Recipient</th><th>Status</th><th>Subject / detail</th><th></th></tr></thead>
+    <tbody>
+    {% for n in log %}
+      <tr><td class="small">{{ n.updated_at }}</td>
+        <td>{{ 'Digest' if n.digest_batch else n.kind|capitalize }}{% if n.alert_id %} · <a href="{{ url_for('main.alert_detail', alert_id=n.alert_id) }}">alert #{{ n.alert_id }}</a>{% endif %}</td>
+        <td>{{ n.priority or '—' }} · {{ n.cadence }}</td>
+        <td>{{ n.display_name or '—' }}<div class="small muted">{{ n.recipient_email or '' }}</div></td>
+        <td><span class="state {{ {'sent':'healthy','pending':'never-checked','suppressed':'disabled'}.get(n.status, 'failed') }}">{{ n.status|capitalize }}</span>
+          {% if n.simulated %}<div class="tag sim">Simulated</div>{% endif %}
+          <div class="small muted">attempts {{ n.attempts }}</div></td>
+        <td class="small">{{ n.subject or '' }}{% if n.change_summary %}<div class="muted">{{ n.change_summary }}</div>{% endif %}{% if n.error %}<div class="err">{{ n.error }}</div>{% endif %}</td>
+        <td>{% if g.role == 'admin' and n.status in ('failed', 'blocked', 'rejected') and n.attempts < 3 %}
+          <form method="post" action="{{ url_for('main.retry_notification', notif_id=n.id) }}"><button class="btn small">Retry</button></form>{% endif %}</td></tr>
+    {% else %}<tr><td colspan="7" class="muted">No notifications yet.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</section>
+{% endblock %}

@@ -3,6 +3,7 @@ import json
 
 from .analysis import build_demo_analysis
 from .db import audit, now_iso, today
+from .delivery import enqueue_for_alert
 from .scoring import match_state, score_priority
 
 
@@ -78,6 +79,7 @@ def assess_for_org(conn, finding_id, org_id, actor_label="System pipeline"):
         audit(conn, org_id=org_id, actor_id=None, actor_label=actor_label, action="alert.created",
               target_type="alert", target_id=alert_id,
               summary=f"{result['priority']} alert ({match['state'].replace('_', ' ')}, {result['score']}/100)")
+        enqueue_for_alert(conn, alert_id, "new")
     elif alert is not None and prev is not None:
         before = {"priority": prev["priority"], "score": prev["score"], "match_state": prev["match_state"]}
         after = {"priority": result["priority"], "score": result["score"], "match_state": match["state"]}
@@ -86,6 +88,12 @@ def assess_for_org(conn, finding_id, org_id, actor_label="System pipeline"):
             audit(conn, org_id=org_id, actor_id=None, actor_label=actor_label, action="alert.evidence_updated",
                   target_type="alert", target_id=alert["id"], summary="New evidence or reassessment", before=before,
                   after=after)
+            rev = conn.execute("SELECT change_summary FROM finding_revisions WHERE finding_id=? ORDER BY version DESC"
+                               " LIMIT 1", (finding_id,)).fetchone()
+            change = f"Finding v{finding['version']}: {rev['change_summary'] if rev else 'reassessed'}"
+            if before != after:
+                change += f"; score {before['score']}->{after['score']}, priority {before['priority']}->{after['priority']}"
+            enqueue_for_alert(conn, alert["id"], "update", change=change)
 
 
 def _analysed_version(conn, org_id, finding_id):

@@ -2,24 +2,31 @@
 {% block title %}Alert #{{ alert.id }}{% endblock %}
 {% block content %}
 {% set prio = rel.override_priority or rel.priority %}
+{% set mstate = rel.override_match_state or rel.match_state %}
 <p><a href="{{ url_for('main.alerts') }}">← Alerts</a></p>
 <div class="alert-head">
   <span class="prio big {{ prio }}">{{ PRIORITY_LABELS[prio] }}</span>
   <div class="grow">
     <h1>{{ finding.title }}</h1>
-    <p class="muted">{{ MATCH_LABELS[rel.match_state] }} · Score {{ rel.score }}/100 · Status: <strong>{{ ALERT_STATUSES[alert.status] }}</strong>
+    <p class="muted">{{ MATCH_LABELS[mstate] }} · Score {{ rel.score }}/100 · Status: <strong>{{ ALERT_STATUSES[alert.status] }}</strong>
       · Category: {{ alert.category|capitalize }} · Created {{ alert.created_at }}
       {% if alert.has_update %}<span class="tag update">Updated evidence since first alert</span>{% endif %}</p>
   </div>
 </div>
 <div class="notice">Priority and match state are a triage recommendation, not evidence of exposure or compromise.
   Exposure can only be confirmed by a person, with an evidence note.</div>
+{% if rel.override_reason %}
+<div class="notice override">Reviewer override by {{ overrider.display_name if overrider else 'unknown' }} at {{ rel.override_at }}:
+  {% if rel.override_priority %}priority <strong>{{ rel.override_priority }}</strong> (computed {{ rel.priority }}){% endif %}
+  {% if rel.override_match_state %}{{ ' · ' if rel.override_priority }}relevance <strong>{{ MATCH_LABELS[rel.override_match_state] }}</strong> (computed {{ MATCH_LABELS[rel.match_state] }}){% endif %}.
+  Reason: {{ rel.override_reason }}. Applies to this finding only; scoring rules are unchanged.</div>
+{% endif %}
 
 <div class="grid-2">
   <section class="card">
     <h2>Why this may matter to {{ g.org.name }}</h2>
-    <p><strong>{{ MATCH_LABELS[rel.match_state] }}.</strong>
-    {% if rel.match_state == 'possible' %}A technology or product overlaps with your inventory, but version, deployment, or installation evidence is incomplete.{% endif %}</p>
+    <p><strong>{{ MATCH_LABELS[mstate] }}.</strong>
+    {% if mstate == 'possible' %}A technology or product overlaps with your inventory, but version, deployment, or installation evidence is incomplete.{% endif %}</p>
     <h3>Inventory evidence used</h3>
     <ul class="plain">{% for e in rel.match_evidence|fromjson %}
       <li><strong>{{ e.item_name or 'Organization context' }}</strong>{% if e.criticality %} ({{ e.criticality }}){% endif %} — {{ e.reason }}</li>
@@ -56,6 +63,22 @@
     </form>
     {% endif %}
     {% endif %}
+    {% if g.role in ('admin', 'lead') %}
+    <details class="override-form">
+      <summary>Override priority or relevance (reason required)</summary>
+      <form method="post" action="{{ url_for('main.override_relevance', alert_id=alert.id) }}" class="stack">
+        <label>Priority <select name="priority"><option value="">Keep computed ({{ rel.priority }})</option>
+          {% for p in ['P1','P2','P3','P4'] %}<option value="{{ p }}" {{ 'selected' if rel.override_priority == p }}>{{ PRIORITY_LABELS[p] }}</option>{% endfor %}</select></label>
+        <label>Relevance <select name="match_state"><option value="">Keep computed ({{ MATCH_LABELS[rel.match_state] }})</option>
+          {% for k, v in MATCH_LABELS.items() %}<option value="{{ k }}" {{ 'selected' if rel.override_match_state == k }}>{{ v }}</option>{% endfor %}</select></label>
+        <label>Reason <textarea name="reason" rows="2" required></textarea></label>
+        <button class="btn small">Save override</button>
+      </form>
+    </details>
+    {% endif %}
+    <h3>Notifications</h3>
+    <ul class="events">{% for n in notes %}<li>{{ n.kind|capitalize }} · {{ n.priority }} · {{ n.display_name or n.recipient_email }} — <strong>{{ n.status|capitalize }}</strong>{% if n.simulated %} (simulated){% endif %}{% if n.error %} <span class="small err">{{ n.error }}</span>{% endif %}</li>
+    {% else %}<li class="muted">No notifications for this alert.</li>{% endfor %}</ul>
     <h3>History</h3>
     <ul class="events">{% for h in history %}<li><span class="muted small">{{ h.created_at }}</span> <strong>{{ h.actor_label }}</strong> — {{ h.summary }}</li>{% endfor %}</ul>
   </section>

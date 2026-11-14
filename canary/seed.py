@@ -8,6 +8,8 @@ from functools import lru_cache
 
 from werkzeug.security import generate_password_hash
 
+from flask import current_app
+
 from .db import audit, init_schema, now_iso
 from .fixtures import SOURCE_CATALOG
 
@@ -42,6 +44,7 @@ ORGS = {
                  owner_team="Engineering", criticality="Unknown", capabilities=["package_registry"]),
         ],
         "assessment": {"dep-review": "No"},
+        "routes": [("cybersecurity", "sureh")],
     },
     "Prairie Valley Medical Center": {
         "industry": "Healthcare", "size": "Unknown", "location": "Unknown",
@@ -56,6 +59,7 @@ ORGS = {
                  owner_team="Digital", criticality="Medium", capabilities=["chatbot", "llm_api"]),
         ],
         "assessment": None,
+        "routes": [("cybersecurity", "priya")],
     },
 }
 
@@ -127,6 +131,14 @@ def seed(conn):
                 " VALUES (?,?,?,?,NULL,'unknown',?,?,?,?,?,1,?)",
                 (org_id, item["name"], item["category"], item["product_key"], item["owner_team"], item["criticality"],
                  json.dumps(item["capabilities"]), item.get("capability_notes"), item.get("data_access_notes"), ts))
+        test_addrs = current_app.config.get("TEST_RECIPIENTS") or {}
+        for username, _role in spec["members"]:
+            if username in test_addrs:  # team-owned test address mapped to a fictional person
+                conn.execute("INSERT INTO notification_recipients (org_id, user_id, email, updated_at) VALUES (?,?,?,?)",
+                             (org_id, user_ids[username], test_addrs[username], ts))
+        for category, username in spec["routes"]:
+            conn.execute("INSERT INTO notification_rules (org_id, category, user_id) VALUES (?,?,?)",
+                         (org_id, category, user_ids[username]))
         if spec["assessment"]:
             admin = user_ids[spec["members"][0][0]]
             cur = conn.execute("INSERT INTO assessments (org_id, respondent_id, created_at, is_demo, note)"

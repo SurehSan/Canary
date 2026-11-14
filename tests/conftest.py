@@ -13,6 +13,9 @@ def app(tmp_path):
         "FIXED_NOW": "2026-11-14T15:00:00+00:00",
         "RETRY_SLEEP_SECONDS": 0,
         "START_SCHEDULER": False,
+        # Hermetic: never pick up a developer's real SMTP / live-source settings.
+        "SMTP_HOST": None, "SMTP_PASSWORD": None, "EMAIL_ALLOWLIST": set(), "TEST_RECIPIENTS": {},
+        "LIVE_SOURCES": False,
     })
     return app
 
