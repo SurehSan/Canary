@@ -211,7 +211,7 @@ The automated version of this walkthrough is
 | 013 | Dashboard counts from records (incl. open plans, plans awaiting approval, waiting guide questions), source health |
 | 014 | Audit events for login, membership, sources, collection, alerts, grouping, overrides, notifications, guide answers/progress/edits, plan lifecycle, questionnaire |
 | 015 | Org scoping (20-route cross-org test), per-org demo simulations, local-only binding, reset, secrets env-only, sanitized SMTP errors, in-app **Privacy and data flows** page |
-| 016 | Demo banner, fictional labels, source notes, reset, simulation labels |
+| 016 | Demo banner, fictional labels, source notes, reset, simulation labels; organizations created (or sources enabled) after collection are assessed against already-collected findings, so a new organization can complete the workflow (CDX-3) |
 
 ## Known limitations
 

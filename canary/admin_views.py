@@ -10,7 +10,7 @@ from .analysis import CORRECTABLE_SECTIONS, apply_corrections, corrections_for, 
 from .auth import actor_label, login_required, org_required, role_required
 from .db import audit, get_db, now_iso
 from .delivery import smtp_status
-from .pipeline import process_findings
+from .pipeline import assess_org
 from .views import bp, commit, org_alert_or_404
 
 CRITICALITIES = ("Low", "Medium", "High", "Critical", "Unknown")
@@ -32,8 +32,7 @@ def _optional(value):
 
 
 def _reassess_org(db, org_id, label):
-    fids = {r["finding_id"] for r in db.execute("SELECT finding_id FROM relevance WHERE org_id=?", (org_id,))}
-    process_findings(db, fids, label)
+    assess_org(db, org_id, label)
 
 
 # ------------------------------------------------------------------ CAN-REQ-006 analysis correction
@@ -212,6 +211,7 @@ def create_org():
     audit(db, org_id=oid, actor_id=g.user["id"], actor_label=f"{g.user['display_name']} (Administrator)",
           action="organization.created", target_type="organization", target_id=oid,
           summary=f"Created organization {name}; creator is its first Administrator")
+    assess_org(db, oid, f"{g.user['display_name']} (Administrator)")
     commit()
     session["org_id"] = oid
     flash(f"{name} created. Add your AI inventory on the Organization page, then refresh sources.")
