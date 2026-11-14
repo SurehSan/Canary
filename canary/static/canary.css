@@ -6,7 +6,7 @@
   --bg: var(--cream); --surface: #ffffff; --surface-2: #fdfbf3; --text: #14213d; --heading: var(--navy);
   --muted: #5d6578; --line: #ebe4cc; --link: #1d4a8f;
   --topbar: var(--navy); --topbar-text: #f6f2e2; --topbar-muted: #b9c2d6;
-  --p1: #c62828; --p2: #d9480f; --p3: #8f6b00; --p4: #55657e;
+  --p1: #c62828; --p2: #c2410c; --p3: #8f6b00; --p4: #55657e;
   --ok: #1e7b4b; --bad: #c62828; --warn: #9a6400;
   --info-bg: var(--canary-soft); --bad-bg: #fdecea; --ok-bg: #e3f4ea; --ai-bg: #e8eefb; --ai-ink: #1d3a7a;
   --shadow: 0 1px 2px rgba(10, 26, 54, .06), 0 2px 8px rgba(10, 26, 54, .04);

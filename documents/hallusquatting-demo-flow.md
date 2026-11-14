@@ -216,6 +216,6 @@ a local demo prototype without claiming Fernwood was actually exposed.
 
 ## The one-line takeaway for judges
 
-> Six months earlier this attack didn't exist. Fernwood had no security
+> HalluSquatting was first described publicly in July 2026. Fernwood had no security
 > person, and Canary still turned a research article into a P2 alert, a
 > tailored fix guide, and an approved plan in one afternoon.
