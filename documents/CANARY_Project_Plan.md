@@ -27,19 +27,26 @@ projects, and walks the team through fixing them.
 
 ### The problem
 
-AI tools ship faster than teams can secure them. In February 2026, a
-crafted GitHub issue prompt-injected the AI issue-triage bot of the Cline
-coding assistant and led to an unauthorized npm release of its CLI
+AI tools ship faster than teams can secure them. In February 2026,
+Cline disclosed that its AI issue-triage workflow could be hijacked by
+instructions hidden in a GitHub issue title, putting its release secrets
+at risk; separately, after a token-rotation mistake left an exposed npm
+token active, a third party used it to publish an unauthorized version of
+the Cline CLI on February 17
 ([Cline post-mortem](https://cline.bot/blog/post-mortem-unauthorized-cline-cli-npm),
 February 24, 2026). IBM's 2026 *Cost of a Data Breach* study found that
 one in four malicious breaches were AI-enabled, a 56% increase over the
 previous year
 ([IBM newsroom](https://newsroom.ibm.com/2026-07-29-ibm-study-one-in-four-malicious-breaches-are-ai-enabled,-costing-companies-6-million-on-average),
-July 29, 2026). Small teams, and many larger organizations, have no one
-whose job is to track this.
+July 29, 2026). Canary's premise is that small teams, and many larger
+organizations, rarely have someone whose job is to track this.
 
-> **Sources checked 2026-11-14 (CAN-REQ-016):** both statements above come
-> from primary sources. The earlier "shadow AI in 43% of breaches" figure
+> **Sources checked 2026-11-14 (CAN-REQ-016):** both sourced statements
+> above match their primary sources. Cline's post-mortem presents the
+> issue-title prompt injection as a way the token *could* have been exposed
+> and does not say how the token used on February 17 was obtained, so do
+> not present them as one confirmed chain. The closing sentence is the
+> product premise, not a sourced statistic. The earlier "shadow AI in 43% of breaches" figure
 > was removed: it appears only in secondary write-ups (which describe it as
 > 43% of breached *organizations*, up from 20%), and IBM's public report
 > page and press release do not state it. Confirm it in the full IBM report

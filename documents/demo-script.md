@@ -31,7 +31,7 @@ exposed or compromised.
 
 | Time | Window | Do | Say |
 |---|---|---|---|
-| 0:00 | — | — | "AI tools ship faster than teams can secure them. In February 2026, a crafted GitHub issue prompt-injected the AI triage bot of the Cline coding assistant and led to an unauthorized release of its CLI. IBM's 2026 breach study found one in four malicious breaches were AI-enabled, up 56% in a year. Small teams have no one watching for this. Canary does." |
+| 0:00 | — | — | "AI tools ship faster than teams can secure them. In February, Cline disclosed that its AI issue-triage bot could be hijacked through a GitHub issue title, and an exposed release token was used to push an unauthorized version of its CLI. IBM's 2026 breach study found one in four malicious breaches were AI-enabled, up 56% in a year. Small teams rarely have anyone watching for this. That's the gap Canary fills." |
 | 0:30 | A | **Organization** | "Fernwood Labs is a fictional five-person startup. Here's its AI inventory: a coding assistant with auto-install on, and a runtime agent whose version is **Unknown**. Canary never guesses: unknown stays unknown. Two Cybersecurity Leads, Sureh and Koewen, and an Administrator, Wyatt." |
 | 1:00 | A | **Sources** → **Refresh sources now** | "Four curated public sources. Collection is separate from notification. Each source shows its real outcome; an outage shows as **Failed**, never as an empty success." |
 | 1:30 | A | **Alerts** → open the HalluSquatting alert | "Two real reports, from The Hacker News and a CSA research note, are grouped into one finding with both links and dates. The grouping is *proposed*: a person confirms it." |
@@ -45,7 +45,7 @@ exposed or compromised.
 | 5:45 | B | **Create contingency plan** → **Submit for review** | "The guide becomes a plan with only the stages that apply. Koewen owns the permission check. Sureh can recommend it but **can't approve it**." |
 | 6:30 | A | **Plans** → open it → tick the confirmation → **Approve** | "Only the Administrator approves, and approval executes nothing on Fernwood's systems." |
 | 7:00 | A | **Audit** | "Everything is in the history: who assigned it, the guide answer, who approved what, and when." |
-| 7:30 | — | — | "Six months ago this attack didn't exist. Fernwood has no security person, and Canary still turned a research article into a P2 alert, a tailored fix guide, and an approved plan in one afternoon." |
+| 7:30 | — | — | "HalluSquatting was only published in July. Fernwood has no security person, and Canary still turned a research article into a P2 alert, a tailored fix guide, and an approved plan in one afternoon." |
 
 ## Extras if there's time
 
@@ -76,7 +76,7 @@ assignment before you start talking.
 
 | Problem | Do this |
 |---|---|
-| The email hasn't arrived after about 30 seconds | Check Junk. If it isn't there, show Notifications → delivery log: **Sent**, with the time Gmail accepted it. Say "Gmail accepted it at 3:15; DSU's filter is holding it." |
+| The email hasn't arrived after about 30 seconds | Check Junk. If it isn't there, show Notifications → delivery log: **Sent**, with the time Gmail accepted it. Say "The mail server accepted it at 3:15 and it hasn't reached the inbox yet. Delivery after that point is outside Canary, and the log shows exactly what happened on our side." Don't guess at the cause; check Junk afterwards. |
 | The delivery log says **Failed** | Don't hide it: "Canary never pretends an email was sent." The error is shown as a type and code only, for example 535 (sign-in refused). Continue the demo. |
 | No internet | Skip the inbox steps. Everything else works offline: the sources are stored copies of the real articles. |
 | A page errors or the data gets messy | In the terminal, press Ctrl+C, then run `python run.py --reset` and `python run.py`. It takes about 5 seconds; sign in again in both windows. |
@@ -87,4 +87,6 @@ assignment before you start talking.
 - That Fernwood (or anyone) was exposed or compromised. It's a *possible* match.
 - "Shadow AI in 43% of breaches." IBM's public material doesn't state it.
 - "4,000 machines compromised" (Cline). That number isn't in Cline's post-mortem.
+- That the issue-title prompt injection is *how* Cline's token was stolen. Cline says it *could* have exposed the token, but doesn't say how the token used on February 17 was obtained.
+- "Six months ago this attack didn't exist." HalluSquatting was published in July 2026, and the wider slopsquatting technique dates back to 2023.
 - That Canary is HIPAA-compliant, production-ready, or real-time.

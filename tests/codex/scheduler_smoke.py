@@ -16,7 +16,10 @@ LOG = ROOT / "tests" / "codex" / "scheduler-app.log"
 BASE = "http://127.0.0.1:5000"
 
 env = {k: v for k, v in os.environ.items() if not k.startswith("CANARY_")}
-env["CANARY_SCHEDULER"] = "1"
+env.update({"CANARY_SMTP_HOST": "", "CANARY_SMTP_PORT": "", "CANARY_SMTP_STARTTLS": "0",
+            "CANARY_SMTP_SSL": "0", "CANARY_SMTP_USERNAME": "", "CANARY_SMTP_PASSWORD": "",
+            "CANARY_MAIL_FROM": "", "CANARY_EMAIL_ALLOWLIST": "", "CANARY_TEST_RECIPIENTS": "",
+            "CANARY_LIVE_SOURCES": "0", "CANARY_SCHEDULER": "1"})
 subprocess.run([sys.executable, "run.py", "--reset"], cwd=ROOT, env=env, check=True,
                capture_output=True, text=True)
 log = LOG.open("w+", encoding="utf-8")

@@ -45,6 +45,12 @@ def scalar(sql, args=()):
 
 def reset_and_start(extra_env):
     env = {k: v for k, v in os.environ.items() if not k.startswith("CANARY_")}
+    # run.py loads the repository .env with setdefault; blank values here are
+    # deliberate and prevent any personal SMTP credentials from reaching this app.
+    env.update({"CANARY_SMTP_HOST": "", "CANARY_SMTP_PORT": "", "CANARY_SMTP_STARTTLS": "0",
+                "CANARY_SMTP_SSL": "0", "CANARY_SMTP_USERNAME": "", "CANARY_SMTP_PASSWORD": "",
+                "CANARY_MAIL_FROM": "", "CANARY_EMAIL_ALLOWLIST": "", "CANARY_TEST_RECIPIENTS": "",
+                "CANARY_LIVE_SOURCES": "0"})
     env.update(extra_env)
     env["CANARY_SCHEDULER"] = "0"
     subprocess.run([sys.executable, "run.py", "--reset"], cwd=ROOT, env=env, check=True,
@@ -111,8 +117,11 @@ def do_walkthrough(run_name, smtp=None):
     extra = {}
     if smtp:
         extra.update({"CANARY_SMTP_HOST": "127.0.0.1", "CANARY_SMTP_PORT": str(smtp.port),
-                      "CANARY_SMTP_STARTTLS": "0", "CANARY_MAIL_FROM": "canary-demo@team.example",
-                      "CANARY_EMAIL_ALLOWLIST": SUREH_ADDR})
+                      "CANARY_SMTP_STARTTLS": "0", "CANARY_SMTP_SSL": "0",
+                      "CANARY_SMTP_USERNAME": "", "CANARY_SMTP_PASSWORD": "",
+                      "CANARY_MAIL_FROM": "canary-demo@team.example",
+                      "CANARY_EMAIL_ALLOWLIST": SUREH_ADDR,
+                      "CANARY_TEST_RECIPIENTS": f"sureh={SUREH_ADDR}"})
     env, proc, log_handle = reset_and_start(extra)
     s = requests.Session()
     try:
