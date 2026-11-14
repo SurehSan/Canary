@@ -59,10 +59,12 @@ def create_app(config=None):
 
 def _ensure_seeded(app):
     with app.app_context():
-        from .db import get_db
+        from .db import get_db, upgrade_schema
         from .seed import reset_demo
         conn = get_db()
         try:
             conn.execute("SELECT 1 FROM organizations LIMIT 1")
         except sqlite3.OperationalError:
             reset_demo(conn)
+            return
+        upgrade_schema(conn, app.logger)  # database from an earlier version: add new tables, report old columns
