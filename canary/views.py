@@ -102,14 +102,15 @@ def select_org():
 # ---------------------------------------------------------------- dashboard
 def source_health(db, org_id, now):
     rows = db.execute(
-        "SELECT c.*, os.enabled FROM source_catalog c JOIN org_sources os ON os.source_id=c.id"
+        "SELECT c.*, os.enabled, os.simulate_failure FROM source_catalog c JOIN org_sources os ON os.source_id=c.id"
         " WHERE os.org_id=? ORDER BY c.id", (org_id,)).fetchall()
     out = []
+    scope = "(org_id IS NULL OR org_id=?)"  # shared runs plus this org's own simulated outages
     for s in rows:
-        last = db.execute("SELECT * FROM collection_runs WHERE source_id=? AND outcome!='skipped'"
-                          " ORDER BY id DESC LIMIT 1", (s["id"],)).fetchone()
-        last_ok = db.execute("SELECT finished_at FROM collection_runs WHERE source_id=? AND outcome IN"
-                             " ('success','success_no_new') ORDER BY id DESC LIMIT 1", (s["id"],)).fetchone()
+        last = db.execute(f"SELECT * FROM collection_runs WHERE source_id=? AND {scope} AND outcome!='skipped'"
+                          " ORDER BY id DESC LIMIT 1", (s["id"], org_id)).fetchone()
+        last_ok = db.execute(f"SELECT finished_at FROM collection_runs WHERE source_id=? AND {scope} AND outcome IN"
+                             " ('success','success_no_new') ORDER BY id DESC LIMIT 1", (s["id"], org_id)).fetchone()
         if not s["enabled"]:
             state = "Disabled"
         elif last is None:
@@ -205,7 +206,8 @@ def sources():
     health = source_health(db, g.org["id"], datetime.fromisoformat(now_iso()))
     runs = db.execute("SELECT r.*, c.name FROM collection_runs r JOIN source_catalog c ON c.id=r.source_id"
                       " JOIN org_sources os ON os.source_id=c.id AND os.org_id=?"
-                      " ORDER BY r.id DESC LIMIT 12", (g.org["id"],)).fetchall()
+                      " WHERE r.org_id IS NULL OR r.org_id=?"
+                      " ORDER BY r.id DESC LIMIT 12", (g.org["id"], g.org["id"])).fetchall()
     items = db.execute("SELECT si.*, r.adapter FROM source_items si LEFT JOIN collection_runs r ON r.id=si.collection_run_id"
                        " WHERE si.source_id IS NULL OR si.source_id IN"
                        " (SELECT source_id FROM org_sources WHERE org_id=? AND enabled=1)"
@@ -236,14 +238,16 @@ def toggle_source(source_id):
 @role_required("admin")
 def simulate_failure(source_id):
     db = get_db()
-    src = db.execute("SELECT * FROM source_catalog WHERE id=?", (source_id,)).fetchone()
+    src = db.execute("SELECT c.name, os.simulate_failure FROM org_sources os JOIN source_catalog c ON c.id=os.source_id"
+                     " WHERE os.org_id=? AND os.source_id=?", (g.org["id"], source_id)).fetchone()
     if src is None:
         abort(404)
     new = 0 if src["simulate_failure"] else 1
-    db.execute("UPDATE source_catalog SET simulate_failure=? WHERE id=?", (new, source_id))
+    db.execute("UPDATE org_sources SET simulate_failure=? WHERE org_id=? AND source_id=?",
+               (new, g.org["id"], source_id))
     audit(db, org_id=g.org["id"], actor_id=g.user["id"], actor_label=actor_label(), action="source.simulation",
           target_type="source", target_id=source_id,
-          summary=f"Demo simulation: {src['name']} outage {'on' if new else 'off'}")
+          summary=f"Demo simulation for this organization only: {src['name']} outage {'on' if new else 'off'}")
     commit()
     return redirect(url_for("main.sources"))
 

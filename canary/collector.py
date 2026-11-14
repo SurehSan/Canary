@@ -26,31 +26,50 @@ class SourceError(Exception):
     pass
 
 
+SIMULATED_OUTAGE = "Simulated outage (demo): HTTP 503 from source"
+
+
 def fetch_fixture(source):
-    if source["simulate_failure"]:
-        raise SourceError("Simulated outage (demo): HTTP 503 from source")
     return [i for i in SOURCE_ITEMS if i["source_key"] == source["key"]]
 
 
 def fetch_live(source):
     getter = current_app.config.get("HTTP_GET") or live.http_get
-    if source["simulate_failure"]:
-        raise SourceError("Simulated outage (demo): HTTP 503 from source")
     items = live.parse_rss(getter(live.LIVE_FEEDS[source["key"]]))
     return [dict(i, source_key=source["key"]) for i in items if live.is_ai_relevant(i["title"], i["excerpt"])]
 
 
 def run_collection(conn, trigger="manual", actor_label="System scheduler"):
-    """Collect every source enabled by at least one organization. Returns touched finding ids."""
+    """Collect every source enabled by at least one organization. Returns touched finding ids.
+
+    A demo outage simulation is scoped to the organization that turned it on (CDX-1): that org gets a
+    failed run of its own, while the shared fetch still runs for every other org that enabled the source.
+    """
     sources = conn.execute(
         "SELECT * FROM source_catalog WHERE id IN (SELECT source_id FROM org_sources WHERE enabled = 1) ORDER BY id"
     ).fetchall()
     touched = set()
     for src in sources:
-        touched |= _run_adapter(conn, src, trigger, FIXTURE_ADAPTER, fetch_fixture, actor_label)
-        if current_app.config.get("LIVE_SOURCES") and src["key"] in live.LIVE_FEEDS:
-            touched |= _run_adapter(conn, src, trigger, live.LIVE_ADAPTER, fetch_live, actor_label)
+        orgs = conn.execute("SELECT org_id, simulate_failure FROM org_sources WHERE source_id=? AND enabled=1",
+                            (src["id"],)).fetchall()
+        if any(not o["simulate_failure"] for o in orgs):
+            touched |= _run_adapter(conn, src, trigger, FIXTURE_ADAPTER, fetch_fixture, actor_label)
+            if current_app.config.get("LIVE_SOURCES") and src["key"] in live.LIVE_FEEDS:
+                touched |= _run_adapter(conn, src, trigger, live.LIVE_ADAPTER, fetch_live, actor_label)
+        for o in orgs:
+            if o["simulate_failure"]:
+                _record_simulated_outage(conn, src, o["org_id"], trigger, actor_label)
     return touched
+
+
+def _record_simulated_outage(conn, src, org_id, trigger, actor_label):
+    ts = now_iso()
+    conn.execute("INSERT INTO collection_runs (source_id, org_id, trigger, adapter, started_at, finished_at, outcome,"
+                 " attempts, error) VALUES (?,?,?,?,?,?,'failed',?,?)",
+                 (src["id"], org_id, trigger, FIXTURE_ADAPTER, ts, ts, MAX_ATTEMPTS, SIMULATED_OUTAGE))
+    audit(conn, org_id=org_id, actor_id=None, actor_label=actor_label, action="collection.failed",
+          target_type="source", target_id=src["id"],
+          summary=f"{src['name']}: simulated outage (demo), failed after {MAX_ATTEMPTS} attempts")
 
 
 def _live_too_soon(conn, src):

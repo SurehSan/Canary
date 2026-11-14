@@ -115,6 +115,17 @@ def _send_smtp(to_addr, subject, body):
         smtp.send_message(msg)
 
 
+def safe_smtp_error(exc):
+    """Record only the error type and numeric SMTP/OS code, never provider-controlled text (CDX-2)."""
+    code = getattr(exc, "smtp_code", None)
+    if code is None and isinstance(exc, smtplib.SMTPRecipientsRefused):
+        codes = {c for c, _msg in exc.recipients.values()}
+        code = ",".join(str(c) for c in sorted(codes)) or None
+    if code is None:
+        code = getattr(exc, "errno", None)
+    return f"SMTP error: {type(exc).__name__}" + (f" (code {code})" if code is not None else "")
+
+
 def _precheck(conn, org_id, email):
     reason = check_recipient(email, current_app.config.get("EMAIL_ALLOWLIST") or set())
     if reason:
@@ -142,7 +153,7 @@ def dispatch(conn, notif_id, actor_label="System notifier"):
             _send_smtp(email, n["subject"], n["body"])
             status, error = "sent", None
         except (smtplib.SMTPException, OSError) as exc:
-            status, error = "failed", f"SMTP error: {type(exc).__name__}: {str(exc)[:200]}"
+            status, error = "failed", safe_smtp_error(exc)
     ts = now_iso()
     where, key = ("digest_batch=?", n["digest_batch"]) if n["digest_batch"] else ("id=?", notif_id)
     conn.execute(f"UPDATE notifications SET status=?, error=?, simulated=?, recipient_email=?, attempts=attempts+1,"

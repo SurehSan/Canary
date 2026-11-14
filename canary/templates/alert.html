@@ -129,6 +129,7 @@
       {% if i.source_note %}<div class="small note">{{ i.source_note }}</div>{% endif %}
       <div class="small">Grouping: <strong>{{ i.group_status|capitalize }}</strong> — {{ i.group_basis }}</div>
       {% if i.group_status == 'proposed' and g.role in ('admin', 'lead') %}
+      <div class="small muted">Findings are shared evidence: confirming or undoing this grouping affects every organization that receives this finding, and is recorded in your organization's audit history.</div>
       <div class="actions">
         <form method="post" action="{{ url_for('main.grouping', alert_id=alert.id, item_id=i.id, action='confirm') }}"><button class="btn small">Confirm grouping</button></form>
         <form method="post" action="{{ url_for('main.grouping', alert_id=alert.id, item_id=i.id, action='undo') }}"><button class="btn small ghost">Undo grouping</button></form>
