@@ -17,6 +17,14 @@ def test_hallusquatting_guide_has_five_ordered_steps_with_required_fields():
     assert "AI-generated draft for human review" in g["label"]
 
 
+def test_source_links_are_labeled_with_the_source_name():
+    named = [dict(SOURCES[0], source_label="The Hacker News"), dict(SOURCES[1], source_label="CSA research notes")]
+    g = build_guide("package-hallucination-squatting", [RUNTIME], named)
+    titles = [l["title"] for l in g["steps"][0]["links"]]
+    assert titles == ["CSA research notes", "The Hacker News", "OWASP LLM03:2025 Supply Chain"]
+    assert all(l["title"] != "Cited source" for s in g["steps"] for l in s["links"])
+
+
 def test_steps_link_only_to_supplied_sources_plus_framework():
     g = build_guide("package-hallucination-squatting", [RUNTIME], SOURCES[:1])
     urls = {l["url"] for s in g["steps"] for l in s["links"]}

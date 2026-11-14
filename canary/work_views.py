@@ -45,7 +45,8 @@ def create_guide(alert_id):
     if existing:
         return redirect(url_for("main.guide_detail", guide_id=existing["id"]))
     finding = db.execute("SELECT * FROM findings WHERE id=?", (alert["finding_id"],)).fetchone()
-    sources = [dict(r) for r in db.execute("SELECT id, url FROM source_items WHERE finding_id=?", (finding["id"],))]
+    sources = [dict(r) for r in db.execute("SELECT id, url, source_label FROM source_items WHERE finding_id=?",
+                                           (finding["id"],))]
     built = build_guide(finding["technique"], inventory_for(db, g.org["id"]), sources)
     ts = now_iso()
     gid = db.execute("INSERT INTO guides (org_id, alert_id, label, technique, created_by, created_at, updated_at)"
