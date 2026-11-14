@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}{{ plan.title }}{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('main.plans_list') }}">← Plans</a>{% if plan.alert_id %} · <a href="{{ url_for('main.alert_detail', alert_id=plan.alert_id) }}">Source alert</a>{% endif %}{% if plan.guide_id %} · <a href="{{ url_for('main.guide_detail', guide_id=plan.guide_id) }}">Source guide</a>{% endif %}</p>
+<div class="row-between">
+  <h1>{{ plan.title }} <span class="plan-status {{ plan.status }}">{{ PLAN_STATUSES[plan.status] }}</span></h1>
+  <span class="muted">Version {{ plan.version }}{% if plan.approved_version %} · approved version {{ plan.approved_version }}{% endif %}</span>
+</div>
+<div class="notice">AI-generated draft for human review. Approval records an Administrator's decision and does not execute anything on your systems; Canary does not run plan actions or send reminders.</div>
+{% if approved and plan.status != 'approved' and plan.version != plan.approved_version %}
+<div class="notice override">This version differs from approved version {{ plan.approved_version }} (approved by {{ approved.actor_label }} at {{ approved.created_at }}). The approved version is preserved below.</div>
+{% endif %}
+
+<section class="card">
+  <div class="row-between"><h2>Workflow</h2>
+  <div class="actions">
+    {% if plan.status == 'draft' and g.role in ('admin', 'lead') %}
+      <form method="post" action="{{ url_for('main.submit_plan', plan_id=plan.id) }}"><button class="btn primary small">Submit for review (recommend approval)</button></form>
+    {% endif %}
+    {% if plan.status == 'in_review' %}
+      {% if g.role == 'admin' %}
+      <form method="post" action="{{ url_for('main.approve_plan', plan_id=plan.id) }}" class="inline-form">
+        <label class="inline small"><input type="checkbox" name="confirm" value="yes" required> I reviewed this plan and approve it as Administrator</label>
+        <button class="btn primary small">Approve</button></form>
+      {% else %}<span class="muted small">Awaiting Administrator approval.</span>{% endif %}
+      <form method="post" action="{{ url_for('main.return_plan', plan_id=plan.id) }}"><button class="btn small ghost">Return to draft</button></form>
+    {% endif %}
+    {% if plan.status == 'approved' and g.role == 'admin' %}
+      <form method="post" action="{{ url_for('main.archive_plan', plan_id=plan.id) }}"><button class="btn small ghost">Archive</button></form>
+    {% endif %}
+  </div></div>
+  <p class="small muted">Draft → In review → Approved → Archived. Editing an approved plan returns it to Draft and keeps the approved version. Plans in review must be returned to draft before editing.</p>
+</section>
+
+<section class="card">
+  <h2>Stages and actions</h2>
+  {% set editable = plan.status in ('draft', 'approved') and g.role in ('admin', 'lead') %}
+  <form method="post" action="{{ url_for('main.edit_plan', plan_id=plan.id) }}">
+    {% if editable %}
+    <div class="inline-form">
+      <label class="small">Title <input name="title" value="{{ plan.title }}" size="40"></label>
+      <label class="small">Review date <input type="date" name="review_date" value="{{ plan.review_date or '' }}"></label>
+    </div>
+    {% else %}<p>Review date: {{ plan.review_date or 'not set' }}</p>{% endif %}
+    {% for stage in STAGES %}{% set rows = actions|selectattr('stage', 'equalto', stage)|list %}{% if rows %}
+      <h3>{{ stage }}</h3>
+      <div class="table-wrap"><table class="tbl">
+        <thead><tr><th>Action</th><th>Owner</th><th>Status</th><th>Due</th></tr></thead>
+        <tbody>{% for a in rows %}<tr>
+          {% if editable %}
+          <td><textarea name="action_{{ a.id }}" rows="2" cols="50">{{ a.action }}</textarea></td>
+          <td><select name="owner_{{ a.id }}">{% for m in members %}<option value="{{ m.id }}" {{ 'selected' if m.id == a.owner_id }}>{{ m.display_name }}</option>{% endfor %}</select></td>
+          <td><select name="status_{{ a.id }}">{% for k, v in ACTION_STATUSES.items() %}<option value="{{ k }}" {{ 'selected' if k == a.status }}>{{ v }}</option>{% endfor %}</select></td>
+          <td><input type="date" name="due_{{ a.id }}" value="{{ a.due_date or '' }}"></td>
+          {% else %}
+          <td>{{ a.action }}</td><td>{{ a.owner }}</td><td>{{ ACTION_STATUSES[a.status] }}</td><td>{{ a.due_date or '—' }}</td>
+          {% endif %}
+        </tr>{% endfor %}</tbody>
+      </table></div>
+    {% endif %}{% endfor %}
+    {% if editable %}<button class="btn small">Save changes{% if plan.status == 'approved' %} (returns plan to draft){% endif %}</button>{% endif %}
+  </form>
+</section>
+
+{% if approved %}
+<section class="card">
+  <h2>Approved version {{ approved.version }}</h2>
+  <p class="small muted">Approved by {{ approved.actor_label }} at {{ approved.created_at }}.</p>
+  <ul class="plain">{% for a in approved.snap.actions %}<li><strong>{{ a.stage }}:</strong> {{ a.action }} — {{ a.owner }}</li>{% endfor %}</ul>
+</section>
+{% endif %}
+
+<section class="card">
+  <h2>Version history</h2>
+  <ul class="events">{% for v in versions %}<li>v{{ v.version }} · <strong>{{ PLAN_STATUSES[v.status] }}</strong> · <span class="muted small">{{ v.created_at }}</span> · {{ v.actor_label }}{% if v.note %} — {{ v.note }}{% endif %}</li>{% endfor %}</ul>
+</section>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Questionnaire{% endblock %}
+{% block content %}
+<h1>Security questionnaire</h1>
+<p class="muted">A short question set mapped to the OWASP Top 10 for LLM Applications (2025). It is not a complete
+  framework assessment and not a compliance score. Answers are never rewritten; each submission creates a new
+  assessment and earlier ones stay in history.</p>
+
+<section class="card">
+  <h2>Recommended focus (from your latest answers)</h2>
+  {% for q in gaps %}
+    <p><strong>{{ q.framework_ref }}</strong> — {{ q.text }} Latest answer: <strong>{{ latest[q.key] }}</strong>.
+    {% if weights[q.key].alerts %}<br><span class="small">Weighted up (weight {{ weights[q.key].weight }}): related open alert{{ 's' if weights[q.key].alerts|length > 1 }}
+      {% for a in weights[q.key].alerts %}<a href="{{ url_for('main.alert_detail', alert_id=a.id) }}">{{ a.title }}</a>{{ ', ' if not loop.last }}{% endfor %}. Your answer is unchanged; only its order in this list changed.</span>{% endif %}</p>
+  {% else %}<p class="muted">No open gaps in the latest assessment.</p>{% endfor %}
+</section>
+
+{% if g.role in ('admin', 'lead') %}
+<section class="card">
+  <h2>New assessment</h2>
+  <form method="post" class="stack">
+    {% for q in questions %}
+    <fieldset class="q">
+      <legend><strong>{{ q.text }}</strong></legend>
+      <div class="small muted">{{ q.help }} · Mapping: <a href="{{ q.framework_url }}" target="_blank" rel="noopener">{{ q.framework_ref }}</a> ({{ q.framework }})
+        {% if weights[q.key].alerts %} · <span class="tag update">Weighted up: related open alert</span>{% endif %}</div>
+      <div class="inline-form">{% for a in ANSWERS %}
+        <label class="inline small"><input type="radio" name="q_{{ q.key }}" value="{{ a }}" {{ 'checked' if latest.get(q.key) == a }}> {{ a }}</label>
+      {% endfor %}</div>
+    </fieldset>
+    {% endfor %}
+    <label>Note (optional) <input name="note" placeholder="e.g. after verifying dependency review is required"></label>
+    <button class="btn primary">Save as new assessment</button>
+  </form>
+</section>
+{% endif %}
+
+<section class="card">
+  <h2>Assessment history</h2>
+  {% for s in assessments %}
+    <h3>{{ s.created_at }} · {{ s.respondent or 'Unknown respondent' }}{% if s.is_demo %} <span class="tag">Fictional demo context</span>{% endif %}</h3>
+    {% if s.note %}<p class="small muted">{{ s.note }}</p>{% endif %}
+    <ul class="plain">{% for q in questions if answers[s.id].get(q.key) %}
+      <li><strong>{{ answers[s.id][q.key] }}</strong> — {{ q.text }} <span class="small muted">{{ q.framework_ref }}</span></li>
+    {% endfor %}</ul>
+  {% else %}<p class="muted">No assessments yet.</p>{% endfor %}
+</section>
+{% endblock %}

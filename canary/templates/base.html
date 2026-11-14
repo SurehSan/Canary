@@ -19,6 +19,8 @@
       {% set ep = request.endpoint %}
       <a href="{{ url_for('main.dashboard') }}" class="{{ 'active' if ep == 'main.dashboard' }}">Dashboard</a>
       <a href="{{ url_for('main.alerts') }}" class="{{ 'active' if ep in ('main.alerts', 'main.alert_detail') }}">Alerts</a>
+      <a href="{{ url_for('main.plans_list') }}" class="{{ 'active' if ep in ('main.plans_list', 'main.plan_detail') }}">Plans</a>
+      <a href="{{ url_for('main.questionnaire') }}" class="{{ 'active' if ep == 'main.questionnaire' }}">Questionnaire</a>
       <a href="{{ url_for('main.sources') }}" class="{{ 'active' if ep == 'main.sources' }}">Sources</a>
       <a href="{{ url_for('main.notifications') }}" class="{{ 'active' if ep == 'main.notifications' }}">Notifications</a>
       <a href="{{ url_for('main.organization') }}" class="{{ 'active' if ep == 'main.organization' }}">Organization</a>

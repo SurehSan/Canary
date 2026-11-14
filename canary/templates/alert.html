@@ -76,6 +76,12 @@
       </form>
     </details>
     {% endif %}
+    <h3>Guide and plan</h3>
+    {% if guide %}<p><a href="{{ url_for('main.guide_detail', guide_id=guide.id) }}">Open step-by-step guide</a>{% if plan %} · <a href="{{ url_for('main.plan_detail', plan_id=plan.id) }}">Plan: {{ plan.title }}</a>{% endif %}</p>
+    {% elif g.role in ('admin', 'lead') %}
+    <form method="post" action="{{ url_for('main.create_guide', alert_id=alert.id) }}"><button class="btn small primary">Get a step-by-step guide</button></form>
+    <p class="small muted">No questionnaire is needed first. Canary asks at most one targeted question if a missing fact changes the guidance.</p>
+    {% endif %}
     <h3>Notifications</h3>
     <ul class="events">{% for n in notes %}<li>{{ n.kind|capitalize }} · {{ n.priority }} · {{ n.display_name or n.recipient_email }} — <strong>{{ n.status|capitalize }}</strong>{% if n.simulated %} (simulated){% endif %}{% if n.error %} <span class="small err">{{ n.error }}</span>{% endif %}</li>
     {% else %}<li class="muted">No notifications for this alert.</li>{% endfor %}</ul>

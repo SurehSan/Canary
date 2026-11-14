@@ -139,16 +139,25 @@ def dashboard():
     db = get_db()
     oid = g.org["id"]
     alerts = alert_rows(db, oid)
+    plans = db.execute("SELECT * FROM plans WHERE org_id=? AND status!='archived' ORDER BY id DESC", (oid,)).fetchall()
+    waiting_guides = db.execute(
+        "SELECT g.id, f.title FROM guides g JOIN guide_questions q ON q.guide_id=g.id"
+        " JOIN alerts a ON a.id=g.alert_id JOIN findings f ON f.id=a.finding_id"
+        " WHERE g.org_id=? AND q.answer IS NULL", (oid,)).fetchall()
+    in_review = [p for p in plans if p["status"] == "in_review"]
+    alert_action = sum(1 for a in alerts if (a["status"] == "new" and a["unread"]) or
+                       (a["assignee_id"] and a["status"] in ("under_investigation", "mitigation_in_progress")))
     counts = {
         "new-alerts": sum(1 for a in alerts if a["status"] == "new"),
-        "requires-action": sum(1 for a in alerts if (a["status"] == "new" and a["unread"]) or
-                               (a["assignee_id"] and a["status"] in ("under_investigation", "mitigation_in_progress"))),
+        "requires-action": alert_action + len(waiting_guides) + len(in_review),
         "high-priority": sum(1 for a in alerts if a["priority"] in ("P1", "P2") and a["status"] not in CLOSED),
         "open-alerts": sum(1 for a in alerts if a["status"] not in CLOSED),
+        "open-plans": len(plans),
     }
     events = db.execute("SELECT * FROM audit_events WHERE org_id=? ORDER BY id DESC LIMIT 8", (oid,)).fetchall()
     health = source_health(db, oid, datetime.fromisoformat(now_iso()))
-    return render_template("dashboard.html", alerts=alerts[:6], counts=counts, events=events, health=health)
+    return render_template("dashboard.html", alerts=alerts[:6], counts=counts, events=events, health=health,
+                           plans=plans, in_review=in_review, waiting_guides=waiting_guides)
 
 
 # ---------------------------------------------------------------- organization
@@ -301,8 +310,11 @@ def alert_detail(alert_id):
                        " WHERE n.alert_id=? AND n.org_id=? ORDER BY n.id DESC", (alert_id, g.org["id"])).fetchall()
     overrider = db.execute("SELECT display_name FROM users WHERE id=?", (rel["override_by"],)).fetchone() \
         if rel["override_by"] else None
+    guide = db.execute("SELECT id FROM guides WHERE alert_id=?", (alert_id,)).fetchone()
+    plan = db.execute("SELECT id, title FROM plans WHERE alert_id=? AND org_id=? ORDER BY id DESC LIMIT 1",
+                      (alert_id, g.org["id"])).fetchone()
     return render_template("alert.html", alert=alert, finding=finding, items=items, rel=rel, analysis=analysis,
-                           notes=notes, overrider=overrider,
+                           notes=notes, overrider=overrider, guide=guide, plan=plan,
                            analysis_row=analysis_row, members=members, revisions=revisions, history=history,
                            cite=cite, next_states=ALERT_TRANSITIONS.get(alert["status"], []),
                            note_required=NOTE_REQUIRED)

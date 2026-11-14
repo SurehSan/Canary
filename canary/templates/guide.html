@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Guide{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('main.alert_detail', alert_id=alert.id) }}">← Alert: {{ alert.title }}</a></p>
+<div class="row-between">
+  <h1>Step-by-step guide</h1>
+  {% if plan %}<a class="btn" href="{{ url_for('main.plan_detail', plan_id=plan.id) }}">Open plan: {{ plan.title }}</a>
+  {% elif g.role in ('admin', 'lead') %}
+  <form method="post" action="{{ url_for('main.create_plan', guide_id=guide.id) }}"><button class="btn primary">Create contingency plan from this guide</button></form>
+  {% endif %}
+</div>
+<div class="notice"><span class="tag ai">{{ guide.label }}</span> Generated directly from the alert; no general
+  questionnaire was required. Each step says what is source-supported, what comes from your organization's context, and what is generated guidance.</div>
+
+{% for q in questions %}
+<section class="card question">
+  <h2>One question for you</h2>
+  <p><strong>{{ q.text }}</strong> <span class="muted">({{ (q.options|fromjson)|join(' / ') }})</span></p>
+  <p class="small muted">Why we ask: {{ q.why }}</p>
+  {% if q.answer %}<p>Answer recorded: <strong>{{ q.answer }}</strong> — {{ q.answerer }}, {{ q.answered_at }}</p>{% endif %}
+  {% if g.role in ('admin', 'lead') %}
+  <form method="post" action="{{ url_for('main.answer_guide_question', guide_id=guide.id) }}" class="inline-form">
+    {% for o in q.options|fromjson %}<button class="btn small {{ 'primary' if q.answer == o }}" name="answer" value="{{ o }}">{{ o }}</button>{% endfor %}
+  </form>
+  {% endif %}
+</section>
+{% endfor %}
+
+{% for s in steps %}
+<section class="card step" id="step-{{ s.position }}">
+  <div class="row-between">
+    <h2>Step {{ s.position }}. {{ s.action }}</h2>
+    <span class="state {{ {'done':'healthy','in_progress':'never-checked','deferred':'disabled'}.get(s.status, '') }}">{{ STEP_STATUSES[s.status] }}</span>
+  </div>
+  {% if s.condition %}
+  <div class="condition {{ s.condition_status }}"><strong>Condition:</strong> {{ s.condition }}<br>
+    <span class="small">{{ s.condition_note }}</span></div>
+  {% endif %}
+  <dl class="kv">
+    <dt>Why it matters</dt><dd>{{ s.rationale }}</dd>
+    <dt>Check</dt><dd>{{ s.checks }}</dd>
+    <dt>Technique</dt><dd>{{ s.technique }}</dd>
+    <dt>Basis</dt><dd class="small">{{ s.basis }}{% if s.edited %} · <span class="tag">Edited by a person</span>{% endif %}</dd>
+    <dt>Evidence / guidance</dt><dd class="small">{% for l in s.links|fromjson %}<a href="{{ l.url }}" target="_blank" rel="noopener">{{ l.title }}</a>{{ ' · ' if not loop.last }}{% endfor %}</dd>
+  </dl>
+  {% if g.role in ('admin', 'lead') %}
+  <div class="actions">
+    {% for k, v in STEP_STATUSES.items() if k != s.status %}
+    <form method="post" action="{{ url_for('main.guide_step_status', guide_id=guide.id, position=s.position) }}">
+      <button class="btn small ghost" name="status" value="{{ k }}">Mark {{ v|lower }}</button></form>
+    {% endfor %}
+  </div>
+  <details><summary class="small">Edit this step</summary>
+    <form method="post" action="{{ url_for('main.guide_step_edit', guide_id=guide.id, position=s.position) }}" class="stack">
+      <label>Action <textarea name="action" rows="2">{{ s.action }}</textarea></label>
+      <label>Why it matters <textarea name="rationale" rows="2">{{ s.rationale }}</textarea></label>
+      <label>Check <textarea name="checks" rows="2">{{ s.checks }}</textarea></label>
+      <label>Technique <textarea name="technique" rows="2">{{ s.technique }}</textarea></label>
+      <button class="btn small">Save edit</button>
+    </form>
+  </details>
+  {% endif %}
+</section>
+{% endfor %}
+
+<section class="card">
+  <h2>Guide history</h2>
+  <ul class="events">{% for h in history %}<li><span class="muted small">{{ h.created_at }}</span> <strong>{{ h.actor_label }}</strong> — {{ h.summary }}</li>{% endfor %}</ul>
+</section>
+{% endblock %}

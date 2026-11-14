@@ -85,3 +85,12 @@ button.link { background: none; border: 0; color: var(--link); cursor: pointer; 
 .inline-form { display: flex; gap: .5rem; margin-bottom: .8rem; flex-wrap: wrap; }
 .org-pick { padding: .6rem 0; border-bottom: 1px solid var(--line); }
 .sub { margin-top: 1.4rem; }
+.plan-status { font-size: .75rem; font-weight: 700; padding: .15rem .5rem; border-radius: 6px; border: 1px solid var(--line); white-space: nowrap; vertical-align: middle; }
+.plan-status.draft { background: var(--bg); } .plan-status.in_review { background: var(--info-bg); }
+.plan-status.approved { background: #dff3e7; color: #14532d; } .plan-status.archived { color: var(--muted); }
+.condition { border-left: 4px solid var(--warn); background: var(--info-bg); padding: .45rem .7rem; border-radius: 6px; margin-bottom: .6rem; }
+.condition.met { border-color: var(--bad); } .condition.not_met { border-color: var(--ok); }
+.notice.override { border-left-color: var(--link); }
+.question { border-color: var(--accent); }
+fieldset.q { border: 1px solid var(--line); border-radius: 8px; padding: .5rem .8rem; }
+details summary { cursor: pointer; margin: .4rem 0; }

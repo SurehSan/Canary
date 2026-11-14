@@ -13,8 +13,19 @@
   <a class="stat" href="{{ url_for('main.alerts') }}"><span class="num" data-count="requires-action">{{ counts['requires-action'] }}</span><span>Require action</span></a>
   <a class="stat" href="{{ url_for('main.alerts', priority='P2') }}"><span class="num" data-count="high-priority">{{ counts['high-priority'] }}</span><span>Open P1/P2</span></a>
   <a class="stat" href="{{ url_for('main.alerts') }}"><span class="num" data-count="open-alerts">{{ counts['open-alerts'] }}</span><span>Open alerts</span></a>
+  <a class="stat" href="{{ url_for('main.plans_list') }}"><span class="num" data-count="open-plans">{{ counts['open-plans'] }}</span><span>Open plans</span></a>
 </section>
-<p class="muted small">Counts are computed from saved alert records for this organization. “Require action” = a new unread alert, or an assigned alert under investigation or in mitigation.</p>
+<p class="muted small">Counts are computed from saved records for this organization. “Require action” = a new unread alert, an assigned alert under investigation or in mitigation, a guide question waiting for an answer, or a plan awaiting approval.</p>
+
+{% if in_review or waiting_guides %}
+<section class="card">
+  <h2>Next actions</h2>
+  <ul class="plain">
+    {% for p in in_review %}<li><span class="plan-status in_review">Awaiting approval</span> <a href="{{ url_for('main.plan_detail', plan_id=p.id) }}">{{ p.title }}</a>{% if g.role == 'admin' %} — you can approve this{% else %} — an Administrator must approve{% endif %}</li>{% endfor %}
+    {% for w in waiting_guides %}<li><span class="tag">Question waiting</span> <a href="{{ url_for('main.guide_detail', guide_id=w.id) }}">Guide for {{ w.title }}</a></li>{% endfor %}
+  </ul>
+</section>
+{% endif %}
 
 <div class="grid-2">
   <section class="card">
