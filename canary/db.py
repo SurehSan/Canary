@@ -8,9 +8,11 @@ from flask import current_app, g
 
 def get_db():
     if "db" not in g:
-        conn = sqlite3.connect(current_app.config["DATABASE"])
+        # Busy timeout + WAL: the background scheduler and web requests share this file.
+        conn = sqlite3.connect(current_app.config["DATABASE"], timeout=15)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
+        conn.execute("PRAGMA journal_mode = WAL")
         g.db = conn
     return g.db
 

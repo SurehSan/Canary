@@ -89,6 +89,8 @@ def _run_adapter(conn, src, trigger, adapter, fetch, actor_label):
                      (now_iso(), "Skipped: minimum interval between live fetches not reached (rate-limit respect)",
                       run_id))
         return set()
+    # Never hold the SQLite write lock across network I/O: other requests must stay writable (review focus 10).
+    conn.commit()
     sleep = current_app.config.get("RETRY_SLEEP_SECONDS", 0.2)
     attempts, items, error = 0, None, None
     while attempts < MAX_ATTEMPTS and items is None:
