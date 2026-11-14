@@ -17,6 +17,8 @@ Create an organization, authenticate members, invite users, assign roles, and en
 6. A user can revoke a member's access; revoked users cannot access that organization's data.
 7. Authentication and authorization failures do not disclose whether another organization's records exist.
 
+**Note**: Only include "Administrator" and "Cybersecurity Lead" roles within the Prototype build.
+
 ## Acceptance criteria
 - A new user can create an organization and access its workspace.
 - An administrator can invite a second user and assign a role.

@@ -24,3 +24,5 @@ CAN-REQ-005.
 
 ## Open decisions
 - Model/provider, prompt and evaluation approach, human review gates, and handling of model/provider data retention.
+
+**Note**: Model provider preferred to be OpenAI Sol via API. API key may be required, if so provide a way to include the API key with the program securely.

@@ -24,3 +24,5 @@ CAN-REQ-002, CAN-REQ-006.
 
 ## Open decisions
 - Scoring rubric and thresholds, default escalation policy, and whether customer overrides affect future assessments.
+
+**Note:** Scoring rubric and thresholds should be more established within the design phase.

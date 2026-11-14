@@ -24,3 +24,5 @@ CAN-REQ-001, CAN-REQ-007.
 
 ## Open decisions
 - Fine-grained role permissions, status transition rules, comments, and team assignment model.
+
+**Note**: Administrators should be able to delegate the assignment of research and implementation to the security leads. PArticulalry in the demo where two security leads are present.

@@ -31,3 +31,5 @@ CAN-REQ-001, CAN-REQ-008.
 - Email provider and configuration of project-owned mock accounts.
 - Digest scheduling, delivery retries, unsubscribe/administrative controls, and default recipient rules.
 - The explicit process for enabling production delivery to non-test recipients.
+
+**Note:** No particular email provider. Emails may be different than others (GMail, Outlook, Proton, etc.)
