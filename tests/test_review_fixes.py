@@ -84,3 +84,26 @@ def test_cdx2_smtp_error_text_is_not_persisted_or_shown(tmp_path, monkeypatch):
                 assert SECRET not in client.get(path).data.decode()
     finally:
         smtp.close()
+
+
+# ------------------------------------------------------------------ demo-step ordering (found in first local run)
+def test_followup_step_is_refused_before_the_finding_is_collected(client, db):
+    login(client, "wyatt", org=org_id(db, FERNWOOD))
+    resp = client.post("/sources/followup")
+    assert resp.status_code == 400
+    assert "Refresh sources first" in resp.data.decode()
+    assert db.execute("SELECT COUNT(*) FROM source_items").fetchone()[0] == 0
+    assert db.execute("SELECT COUNT(*) FROM findings").fetchone()[0] == 0
+
+
+def test_followup_button_is_disabled_until_refresh(client, db):
+    login(client, "wyatt", org=org_id(db, FERNWOOD))
+    page = client.get("/sources").data.decode()
+    assert "Refresh sources first" in page
+    refresh(client)
+    client.post("/sources/followup")
+    alert = db.execute("SELECT id FROM alerts WHERE org_id=?", (org_id(db, FERNWOOD),)).fetchone()["id"]
+    items = db.execute("SELECT source_label, group_status FROM source_items WHERE finding_id="
+                       "(SELECT finding_id FROM alerts WHERE id=?) ORDER BY id", (alert,)).fetchall()
+    assert [i["group_status"] for i in items][0] == "primary" and items[0]["source_label"] == "The Hacker News"
+    assert items[-1]["source_label"] == "Additional evidence (demo follow-up)"

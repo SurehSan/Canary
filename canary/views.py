@@ -12,6 +12,7 @@ from .delivery import (SIMULATE_KEY, dispatch, enqueue_for_alert, get_setting, p
                        send_test, set_setting, smtp_status)
 from .fixtures import FOLLOWUP_ITEMS
 from .live import LIVE_FEEDS
+from .normalize import detect_technique
 from .notify import SUBJECT_PREFIX, check_recipient
 from .pipeline import assess_backlog, assess_org, process_findings
 from .scoring import MATCH_LABELS, PRIORITY_LABELS
@@ -200,6 +201,14 @@ def revoke_member(user_id):
 
 
 # ---------------------------------------------------------------- sources
+def followup_ready(db, org_id):
+    """The follow-up demo step only makes sense once the finding it follows up on is visible to this org."""
+    techniques = {detect_technique(i["title"], i.get("excerpt", "")) for i in FOLLOWUP_ITEMS} - {None}
+    return bool(techniques) and db.execute(
+        "SELECT 1 FROM relevance r JOIN findings f ON f.id = r.finding_id WHERE r.org_id = ? AND f.technique IN (%s)"
+        % ",".join("?" * len(techniques)), (org_id, *techniques)).fetchone() is not None
+
+
 @bp.route("/sources")
 @org_required
 def sources():
@@ -215,7 +224,8 @@ def sources():
                        " ORDER BY si.id DESC LIMIT 15", (g.org["id"],)).fetchall()
     return render_template("sources.html", health=health, runs=runs, items=items,
                            live_on=current_app.config.get("LIVE_SOURCES"), live_feeds=LIVE_FEEDS,
-                           followup_done=db.execute("SELECT 1 FROM source_items WHERE source_id IS NULL").fetchone())
+                           followup_done=db.execute("SELECT 1 FROM source_items WHERE source_id IS NULL").fetchone(),
+                           followup_ready=followup_ready(db, g.org["id"]))
 
 
 @bp.post("/sources/<int:source_id>/toggle")
@@ -434,6 +444,9 @@ def override_relevance(alert_id):
 def followup_evidence():
     """Demo step: a later report arrives and attaches to the existing finding (CAN-REQ-005 update)."""
     db = get_db()
+    if not followup_ready(db, g.org["id"]):
+        abort(400, description="Refresh sources first: the follow-up report adds evidence to the HalluSquatting "
+                               "finding, which this organization hasn't collected yet.")
     touched = set()
     for raw in FOLLOWUP_ITEMS:
         fid = ingest_item(db, raw, None, None, source_label="Additional evidence (demo follow-up)", tier="C")
