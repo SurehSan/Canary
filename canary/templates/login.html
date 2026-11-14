@@ -10,18 +10,24 @@
 </div>
 <section class="card narrow">
   <h2>Sign in</h2>
+  {% if not presentation %}
   <p class="muted">Demo authentication only (no SSO, MFA, or recovery). All demo accounts use the local password
     <code>demo</code>.</p>
+  {% endif %}
   {% if error %}<div class="flash error">{{ error }}</div>{% endif %}
   <form method="post" class="stack">
     <label>Username <input name="username" autocomplete="username" required></label>
     <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
     <button class="btn primary">Sign in</button>
   </form>
+  {% if presentation %}
+  <p class="small">New here? <a href="{{ url_for('main.register') }}">Create an account</a>, then create your organization.</p>
+  {% else %}
   <p class="small">New here? <a href="{{ url_for('main.register') }}">Create a local demo account</a>, then create your own organization.</p>
   <h2 class="sub">Demo accounts (fictional)</h2>
   <ul class="plain">
     {% for a in accounts %}<li><code>{{ a.username }}</code> — {{ a.display_name }}, {{ a.title }}</li>{% endfor %}
   </ul>
+  {% endif %}
 </section>
 {% endblock %}

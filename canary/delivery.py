@@ -13,7 +13,13 @@ from flask import current_app
 
 from .analysis import apply_corrections, corrections_for
 from .db import audit, now_iso
-from .notify import SUBJECT_PREFIX, TEST_NOTICE, build_digest, build_message, cadence_for, check_recipient, fingerprint
+from .notify import (PRESENTATION_FOOTER, PRESENTATION_PREFIX, SUBJECT_PREFIX, TEST_NOTICE, build_digest, build_message,
+                     cadence_for, check_recipient, fingerprint)
+
+
+def presenting():
+    """Presentation mode: product-like wording; emails keep a clean "[Canary · Test]" tag (see notify.py)."""
+    return bool(current_app.config.get("PRESENTATION_MODE"))
 
 SIMULATE_KEY = "simulate_delivery_failure"
 
@@ -91,7 +97,7 @@ def enqueue_for_alert(conn, alert_id, kind, change=None, actor_label="System not
                           "Unchanged since the last notification (no material change).", ts, ts))
             continue
         msg_kind = "update" if last else kind
-        subject, body = build_message(dict(ctx, kind=msg_kind, change=change))
+        subject, body = build_message(dict(ctx, kind=msg_kind, change=change), presentation=presenting())
         queued.append(conn.execute(
             "INSERT INTO notifications (org_id, alert_id, user_id, kind, cadence, priority, fingerprint, change_summary,"
             " status, subject, body, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,'pending',?,?,?,?)",
@@ -213,7 +219,7 @@ def process_digest(conn, org_id=None, actor_label="System notifier (daily digest
             ctx = alert_context(conn, r["alert_id"])
             entries.append({k: ctx[k] for k in ("priority", "match_state", "title", "link")})
         org = conn.execute("SELECT name FROM organizations WHERE id=?", (oid,)).fetchone()
-        subject, body = build_digest(org["name"], entries)
+        subject, body = build_digest(org["name"], entries, presentation=presenting())
         batch = uuid.uuid4().hex[:12]
         conn.executemany("UPDATE notifications SET digest_batch=?, subject=?, body=? WHERE id=?",
                          [(batch, subject, body, r["id"]) for r in group])
@@ -223,8 +229,14 @@ def process_digest(conn, org_id=None, actor_label="System notifier (daily digest
 
 def send_test(conn, org_id, email, actor_label):
     ts = now_iso()
-    subject = f"{SUBJECT_PREFIX} Delivery check from Canary"
-    body = TEST_NOTICE + "\n\nThis is a delivery check for the Canary demo's test-email path. No alert is attached."
+    if presenting():
+        org = conn.execute("SELECT name FROM organizations WHERE id=?", (org_id,)).fetchone()
+        subject = f"{PRESENTATION_PREFIX} Delivery check from Canary"
+        body = ("This is a delivery check for Canary email notifications. No alert is attached.\n\n"
+                + PRESENTATION_FOOTER.format(org=org["name"] if org else "This workspace"))
+    else:
+        subject = f"{SUBJECT_PREFIX} Delivery check from Canary"
+        body = TEST_NOTICE + "\n\nThis is a delivery check for the Canary demo's test-email path. No alert is attached."
     nid = conn.execute("INSERT INTO notifications (org_id, kind, cadence, status, recipient_email, subject, body,"
                        " created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
                        (org_id, "test", "manual", "pending", (email or "").strip(), subject, body, ts, ts)).lastrowid

@@ -25,10 +25,47 @@ CLOSED = ("resolved_verified", "not_applicable", "risk_accepted")
 STALE_AFTER = timedelta(hours=2)
 
 
+PRESENTATION_SCRUB = [
+    (" (fictional sample data only)", " (sample data only)"),
+    (" (fictional)", ""),
+    ("Demo analysis (deterministic) — ", ""),
+    (" (demo template; no actions are executed)", " (no actions are executed)"),
+    ("Additional evidence (demo follow-up)", "Additional evidence (follow-up report)"),
+    ("Offline fixture adapter (demo)", "Catalog feed"),
+    ("Seeded fictional demo organization ", "Workspace created: "),
+    ("Initial assessment (fictional demo context)", "Initial assessment"),
+    ("Signed in (demo authentication)", "Signed in"),
+    ("Simulated outage (demo):", "Simulated outage:"),
+    ("Simulated delivery failure (demo)", "Simulated delivery failure"),
+    ("System (demo seed)", "System"),
+    ("Registered a local demo account", "Registered an account"),
+    ("Registered local demo user", "Registered user"),
+    ("Demo simulation for this organization only:", "Simulation for this organization only:"),
+    ("Demo simulation:", "Simulation:"),
+    ("Demo step: follow-up report delivered", "Follow-up report delivered"),
+    ("Demo reset:", "Workspace reset:"),
+]
+
+
 def register_filters(app):
     app.jinja_env.filters["fromjson"] = json.loads
     app.jinja_env.globals.update(ROLE_LABELS=ROLE_LABELS, MATCH_LABELS=MATCH_LABELS, PRIORITY_LABELS=PRIORITY_LABELS,
                                  ALERT_STATUSES=ALERT_STATUSES, FIXTURE_ADAPTER=FIXTURE_ADAPTER)
+
+    @app.context_processor
+    def presentation_flag():
+        return {"presentation": bool(current_app.config.get("PRESENTATION_MODE"))}
+
+    # Presentation mode rewrites demo wording stored in the data (seed titles, labels, audit text) at display
+    # time only; the database keeps the original labels.
+    def finalize(value):
+        if isinstance(value, str) and current_app.config.get("PRESENTATION_MODE"):
+            for old, new in PRESENTATION_SCRUB:
+                if old in value:
+                    value = value.replace(old, new)
+        return value
+
+    app.jinja_env.finalize = finalize
 
     @app.errorhandler(400)
     @app.errorhandler(403)

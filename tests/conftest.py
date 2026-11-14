@@ -15,7 +15,7 @@ def app(tmp_path):
         "START_SCHEDULER": False,
         # Hermetic: never pick up a developer's real SMTP / live-source settings.
         "SMTP_HOST": None, "SMTP_PASSWORD": None, "EMAIL_ALLOWLIST": set(), "TEST_RECIPIENTS": {},
-        "ALLOWLIST_DOMAINS": None,
+        "ALLOWLIST_DOMAINS": None, "PRESENTATION_MODE": False,
         "LIVE_SOURCES": False,
     })
     return app
