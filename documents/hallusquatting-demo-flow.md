@@ -213,3 +213,9 @@ Canary turns public research into a source-backed P2 alert, sends a clearly
 marked test email to a real team inbox, guides two Cybersecurity Leads through
 an uncertain investigation, and records a human-approved response plan—all in
 a local demo prototype without claiming Fernwood was actually exposed.
+
+## The one-line takeaway for judges
+
+> Six months earlier this attack didn't exist. Fernwood had no security
+> person, and Canary still turned a research article into a P2 alert, a
+> tailored fix guide, and an approved plan in one afternoon.
