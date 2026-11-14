@@ -10,23 +10,49 @@ Planning documents: [implementation plan](documents/implementation-plan.md) ·
 [Fernwood demo flow](documents/hallusquatting-demo-flow.md) ·
 [methodology](methodology.md)
 
-## Quick start
+## Run the demo
 
-Requires Python 3.12+. The app needs only Flask (pinned in
-[requirements.txt](requirements.txt)); everything else is in the standard
-library. No network access or API key is needed to run the demo. Anaconda
-already includes Flask and pytest, so you can skip the install step there.
+These steps take you from a fresh copy of the repository to the running demo.
+Run every command from the project folder (the one containing `run.py`).
+
+**1. Check Python.** You need Python 3.12 or newer (`python --version`). With
+Anaconda, Flask and pytest are already installed, so you can skip step 2.
+
+**2. Install the dependencies** (optional virtual environment first):
 
 ```bash
-python -m venv .venv && .venv\Scripts\activate     # optional; macOS/Linux: source .venv/bin/activate
-pip install -r requirements.txt       # run the app
-pip install -r requirements-dev.txt   # also run tests, Codex scripts, and the logo asset script
-python run.py            # http://127.0.0.1:5000  (creates + seeds instance/canary.sqlite on first run)
-python run.py --reset    # delete ALL records and restore the seed state
-python -m pytest         # run the test suite
+python -m venv .venv
+.venv\Scripts\activate              # Windows; on macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt     # the app only needs Flask
 ```
 
-Demo accounts (fictional, demo-only authentication, password `demo` for all):
+**3. (Optional) Set up real test email.** Without this the demo still runs
+completely; emails just show as **Blocked** in the app. To send real test
+email:
+
+- Copy [.env.example](.env.example) to `.env`, which git ignores and never commits.
+- Fill in a Gmail sender: username and From set to the Gmail address, and the
+  password set to a [Gmail App Password](https://myaccount.google.com/apppasswords),
+  **not** your normal password.
+- Add the team-owned inbox that should receive the tests to
+  `CANARY_EMAIL_ALLOWLIST` and `CANARY_TEST_RECIPIENTS` (for example
+  `sureh=you@school.edu`).
+- Set `CANARY_SCHEDULER=0` so email goes out only when you click.
+
+Keep each setting on one line, with no comments after the value. University
+Microsoft 365 accounts can't be used as the sender because they block SMTP
+sign-in (error 535). See [Test email safety](#test-email-safety-can-req-009).
+
+**4. Reset and start the app:**
+
+```bash
+python run.py --reset    # fresh demo data; also maps the test inbox from .env
+python run.py            # leave this terminal open
+```
+
+**5. Open http://127.0.0.1:5000** and sign in. Every demo account uses the
+password `demo`. Use a normal window for `wyatt` and a **private/incognito**
+window for `sureh`, because one browser window holds one signed-in person.
 
 | Username | Person | Organization | Role |
 |---|---|---|---|
@@ -34,6 +60,39 @@ Demo accounts (fictional, demo-only authentication, password `demo` for all):
 | `sureh` | Sureh, backend engineer | Fernwood Labs | Cybersecurity Lead |
 | `koewen` | Koewen, platform engineer | Fernwood Labs | Cybersecurity Lead |
 | `priya` | Priya, IT director | Prairie Valley Medical Center | Administrator |
+
+**6. Follow the demo script:** [documents/demo-script.md](documents/demo-script.md)
+has an 8-minute and a 3-minute walkthrough, with clicks, talking points, and
+fallbacks. In short: as Wyatt, **Sources → Refresh sources now** → open the
+HalluSquatting alert (**Possible match, 65/100, P2 High**) → **Notifications →
+Run processing cycle** (the test email). Then, as Sureh: assign the alert →
+**Get a step-by-step guide** → **Create contingency plan** → submit. Finally, as
+Wyatt, approve the plan.
+
+**7. Stop or start over.** Press **Ctrl+C** in the terminal to stop. Run
+`python run.py --reset` and then `python run.py` to start again from clean
+data; you'll need to sign in again.
+
+**If something doesn't work**
+
+| Problem | Fix |
+|---|---|
+| `ModuleNotFoundError: No module named 'flask'` | Run step 2, or activate the virtual environment you installed into. |
+| Port 5000 busy ("Only one usage of each socket address", or "Address already in use" on macOS/Linux) | Another copy is still running. Stop it with Ctrl+C in its terminal, or close that terminal. |
+| The alert's score isn't 65 | The source-recency points change after 2027-01-04. Add `CANARY_FIXED_NOW=2026-11-14T15:00:00+00:00` to `.env` and reset. |
+| Email shows **Blocked** | No sender or no test address is configured; see step 3. **Rejected** means the address isn't on the allowlist. |
+| Email shows **Failed (code 535)** | The SMTP provider refused the sign-in: check the App Password, or don't use a university Microsoft 365 account as the sender. |
+| Email says **Sent** but hasn't arrived | The mail server accepted it. Check Junk/Quarantine; first messages from a new sender are often filtered. |
+
+**Command reference**
+
+```bash
+python run.py                         # start at http://127.0.0.1:5000 (creates and seeds instance/canary.sqlite on first run)
+python run.py --reset                 # delete ALL records and restore the seed state
+pip install -r requirements-dev.txt   # adds pytest, requests (Codex scripts), Pillow (logo asset script)
+python -m pytest                      # run the test suite (213 tests)
+python design/make_brand_assets.py    # regenerate logo assets from design/logo.png
+```
 
 ### Environment variables (all optional)
 
