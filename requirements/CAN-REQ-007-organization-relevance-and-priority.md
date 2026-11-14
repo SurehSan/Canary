@@ -1,6 +1,6 @@
 # CAN-REQ-007: Organization Relevance and Priority Assessment
 
-**Status:** Proposed · **Priority:** MVP · **Source:** Project Plan §§5, 6, 7
+**Status:** Proposed · **Priority:** Local demo prototype · **Source:** Project Plan §§5, 6, 7
 
 ## Purpose
 Help teams triage findings using their supplied context without overstating exposure.
@@ -22,7 +22,8 @@ Help teams triage findings using their supplied context without overstating expo
 ## Dependencies
 CAN-REQ-002, CAN-REQ-006.
 
-## Open decisions
-- Scoring rubric and thresholds, default escalation policy, and whether customer overrides affect future assessments.
-
-**Note:** Scoring rubric and thresholds should be more established within the design phase.
+## Prototype design decisions
+- Code assigns match state. Confirmed requires an exact product match and a known inventory version overlapping the source's affected-version range. Possible means a product/technology match exists but version, deployment, or installation evidence is incomplete. Industry-only is context without an inventory match; No known match means no supported relationship. Unknown versions can never produce Confirmed.
+- Compute a visible 0–100 triage score from severity (0–25), exploitation evidence (0–25), inventory match (0–20), asset criticality (0–15), source reliability/recency (0–10), and relevant questionnaire gap (0–5); subtract 10 for a confirmed duplicate with no new material information. Map 80–100 to P1, 60–79 to P2, 35–59 to P3, and 0–34 to P4. Show factor values and source/context evidence.
+- P1 additionally requires credible active exploitation and a Confirmed match to a Critical asset; otherwise cap at P2. For the demo, hallusquatting is P2 / Possible because research describes the technique but no malicious package is tied to Fernwood. Priority is triage guidance, never evidence of exposure.
+- Authorized users may override match or priority for the current finding only, with a required reason. Overrides do not silently change the scoring rules or future assessments. Initial default routing is P1 immediate test email, P2 prompt test email, P3/P4 daily digest; all email is restricted to the CAN-REQ-009 team-owned address allowlist.

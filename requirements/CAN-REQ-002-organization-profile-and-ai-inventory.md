@@ -1,6 +1,6 @@
 # CAN-REQ-002: Organization Profile and AI Asset Inventory
 
-**Status:** Proposed · **Priority:** MVP · **Source:** Project Plan §§3, 5, 6, 10
+**Status:** Proposed · **Priority:** Local demo prototype · **Source:** Project Plan §§3, 5, 6, 10
 
 ## Purpose
 Capture enough customer context to make threat alerts relevant and explain why a finding may apply.
@@ -22,7 +22,7 @@ Capture enough customer context to make threat alerts relevant and explain why a
 ## Dependencies
 CAN-REQ-001.
 
-## Open decisions
-- Required versus optional profile fields and inventory import/export format.
-- Whether the MVP supports integrations or manual entry only.
-- Data retention and deletion behavior are governed by CAN-REQ-015.
+## Prototype design decisions
+- Require organization name and industry. Make size, locations, monitoring interests, inventory product/category/version/team/criticality, and vendor data-access notes optional; support explicit Unknown and Unconfirmed values.
+- Use manual entry only; integrations and inventory import/export are outside the local prototype.
+- Store profile and inventory only in the local prototype database, scoped to the organization. Keep entered data until the user invokes the full demo reset; reset deletes it as described in CAN-REQ-015.

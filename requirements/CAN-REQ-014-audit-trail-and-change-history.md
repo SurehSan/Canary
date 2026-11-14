@@ -1,6 +1,6 @@
 # CAN-REQ-014: Audit Trail and Change History
 
-**Status:** Proposed · **Priority:** MVP · **Source:** Project Plan §§6, 11
+**Status:** Proposed · **Priority:** Local demo prototype · **Source:** Project Plan §§6, 11
 
 ## Purpose
 Preserve enough history for an organization to understand what Canary found, what changed, and what people decided.
@@ -21,5 +21,7 @@ Preserve enough history for an organization to understand what Canary found, wha
 ## Dependencies
 CAN-REQ-001, CAN-REQ-008, CAN-REQ-012.
 
-## Open decisions
-- Retention period, export needs, tamper-evidence requirements, and which events are considered audit-critical.
+## Prototype design decisions
+- Audit authentication/session events, membership and source setting changes, profile/inventory changes, collection outcomes, analysis corrections, relevance/priority overrides, alert assignment/status/comment changes, questionnaire submissions, guide edits/progress, and plan edits/reviews/approvals.
+- Record organization, actor or system process, action, target, timestamp, and safe before/after summary. Never record passwords, API keys, or unnecessary source/customer text. Scope audit views to organization Administrators; Cybersecurity Leads see history for records they can investigate.
+- Keep audit data locally until full demo reset; do not offer audit export or tamper-proof claims in the prototype. The log is an application history for demonstration, not a production-grade immutable audit system.

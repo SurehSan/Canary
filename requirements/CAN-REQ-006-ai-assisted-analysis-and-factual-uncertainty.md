@@ -1,6 +1,6 @@
 # CAN-REQ-006: AI-Assisted Analysis and Factual Uncertainty
 
-**Status:** Proposed · **Priority:** MVP · **Source:** Project Plan §§6, 7, 11
+**Status:** Proposed · **Priority:** Local demo prototype · **Source:** Project Plan §§6, 7, 11
 
 ## Purpose
 Use language models to help classify and explain findings while keeping evidence and uncertainty clear.
@@ -22,7 +22,8 @@ Use language models to help classify and explain findings while keeping evidence
 ## Dependencies
 CAN-REQ-005.
 
-## Open decisions
-- Model/provider, prompt and evaluation approach, human review gates, and handling of model/provider data retention.
-
-**Note**: Model provider preferred to be OpenAI Sol via API. API key may be required, if so provide a way to include the API key with the program securely.
+## Prototype design decisions
+- Use OpenAI API as the preferred optional analysis provider, as noted. Read the API key only from a local environment secret; never commit, display, or log it. If no key is configured, use deterministic demo analysis for seeded findings and label it clearly. The prototype must remain demonstrable without network/API access.
+- Send only source-derived finding fields and the minimum organization context needed for relevance; exclude credentials and sensitive vendor data. Treat retrieved text as untrusted, constrain output to a schema, validate citations against supplied source references, and leave unsupported values unknown.
+- Present generated analysis as a draft for human review. Authorized users can correct it, with prior value, editor, timestamp, and reason recorded. Prototype analysis should be manually checked against the demo case; it is not a validated security classifier.
+- Disclose that API calls are subject to the configured provider's terms and retention settings. No regulated or sensitive customer data may be entered in this local demo.

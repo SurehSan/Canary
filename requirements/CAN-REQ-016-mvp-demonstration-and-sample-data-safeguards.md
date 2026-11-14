@@ -1,12 +1,12 @@
-# CAN-REQ-016: MVP Demonstration and Sample-Data Safeguards
+# CAN-REQ-016: Demo Prototype and Sample-Data Safeguards
 
-**Status:** Proposed · **Priority:** MVP · **Source:** Project Plan §§3, 10, 11
+**Status:** Proposed · **Priority:** Local demo prototype · **Source:** Project Plan §§3, 10, 11
 
 ## Purpose
 Demonstrate Canary's end-to-end value with a realistic workflow without misleading users about fictional or simulated information.
 
 ## Requirements
-1. The MVP can demonstrate organization setup, AI inventory/questionnaire entry, source finding intake, analysis, alert delivery/viewing, report or plan creation, human review, and saved dashboard state.
+1. The local prototype can demonstrate organization setup, AI inventory/questionnaire entry, source finding intake, analysis, mock alert delivery/viewing, report or plan creation, human review, and saved dashboard state.
 2. Prairie Valley Medical Center may be used as a fictional demonstration organization; its data must be labeled as fictional.
 3. Simulated incidents, vulnerabilities, assets, and advisories must be conspicuously labeled as simulated and must not be presented as real threats.
 4. When using a real advisory, the demonstration preserves the authoritative source link and dates and does not alter the source's claims.
@@ -22,5 +22,9 @@ Demonstrate Canary's end-to-end value with a realistic workflow without misleadi
 ## Dependencies
 CAN-REQ-001 through CAN-REQ-015.
 
-## Open decisions
-- Which sample real advisory to use, demo reset strategy, and whether the demo environment is local, hosted, or seeded.
+## Prototype design decisions
+- Run the demo locally and seed Fernwood Labs as the primary walkthrough organization, following `documents/hallusquatting-demo-flow.md`. Prairie Valley Medical Center may be included as a second fictional sample to demonstrate another organization context; it is not the primary flow.
+- Use the hallusquatting sources and preserve their original links and publication dates. Treat claims according to the cited sources; label any invented Fernwood assets, package events, and outcomes as fictional/simulated. Do not alter a real source's claims.
+- Provide a visible “Demo data” banner and distinguish simulated/sample records from collected source records. Provide a full reset to restore the seeded state and remove user changes.
+- Demonstrate all CAN-REQ-001–015 in the walkthrough or through an adjacent screen/state: accounts and roles, organization/inventory, source settings and status, collection, normalization/evidence/deduplication, analysis, relevance/priority, alert triage, mock notification, questionnaire, guide, human-approved plan, dashboard, audit history, and privacy/data safeguards.
+- Do not present the IBM 43% or GitHub issue-title examples as verified until checked against primary sources. Their omission does not block the hallusquatting prototype.

@@ -1,6 +1,6 @@
 # CAN-REQ-003: Monitoring Source Configuration
 
-**Status:** Proposed · **Priority:** MVP · **Source:** Project Plan §7
+**Status:** Proposed · **Priority:** Local demo prototype · **Source:** Project Plan §7
 
 ## Purpose
 Let Canary monitor a curated set of sources selected for trust and customer priorities.
@@ -22,7 +22,7 @@ Let Canary monitor a curated set of sources selected for trust and customer prio
 ## Dependencies
 CAN-REQ-001. Collection behavior is defined in CAN-REQ-004.
 
-## Open decisions
-- Exact initial source list and whether sources are global defaults, per-organization subscriptions, or both.
-- Supported source types and customer ability to add sources.
-- Initial polling intervals. The plan's frequency examples are proposals, not service guarantees.
+## Prototype design decisions
+- Provide a fixed starter catalog of The Hacker News, CSA research notes, GitHub Security Advisories, and OWASP GenAI, matching the demo flow. Catalog definitions are global; each organization independently enables sources and monitoring areas.
+- Support only approved RSS feeds, documented APIs, and permitted public retrieval methods. Users can enable/disable catalog entries but cannot add arbitrary URLs or authenticated/paywalled sources.
+- Use manual refresh plus a local hourly schedule. Display last successful check and failures. This is a demo cadence, not a service-level or real-time promise; production source terms and limits must be re-reviewed before any deployment.

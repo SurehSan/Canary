@@ -1,6 +1,6 @@
 # CAN-REQ-004: External Source Collection
 
-**Status:** Proposed · **Priority:** MVP · **Source:** Project Plan §§7, 10
+**Status:** Proposed · **Priority:** Local demo prototype · **Source:** Project Plan §§7, 10
 
 ## Purpose
 Collect public security advisories and AI-related threat information reliably and respectfully.
@@ -22,6 +22,7 @@ Collect public security advisories and AI-related threat information reliably an
 ## Dependencies
 CAN-REQ-003.
 
-## Open decisions
-- Job scheduler, retry policy, latency target, supported formats, and source-specific adapters.
-- Whether collection is global and shared or performed per organization.
+## Prototype design decisions
+- Use a local hourly scheduler and administrator-triggered manual refresh. Support only the source-specific RSS/API/public adapters in the CAN-REQ-003 starter catalog. Run collection centrally once and associate resulting findings with organizations whose source and monitoring settings match.
+- Retry transient failures up to three times with short bounded backoff; record each attempt and expose terminal failures to the administrator. No latency guarantee is made. Preserve original URL, available publication/update time, retrieval time, and outcome.
+- Store normalized metadata and source links; retain only short excerpts required for analysis where source terms permit. Do not bypass access controls or reproduce full articles. Deduplicate repeat collection through CAN-REQ-005 identity rules.

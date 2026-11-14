@@ -1,6 +1,6 @@
 # CAN-REQ-010: Framework-Anchored Security Questionnaire
 
-**Status:** Proposed · **Priority:** MVP · **Source:** sureh.md; Project Plan §§7a, 10
+**Status:** Proposed · **Priority:** Local demo prototype · **Source:** sureh.md; Project Plan §§7a, 10
 
 ## Purpose
 Capture a small amount of structured security-practice context and map identified gaps to recognized guidance.
@@ -22,5 +22,7 @@ Capture a small amount of structured security-practice context and map identifie
 ## Dependencies
 CAN-REQ-001, CAN-REQ-002.
 
-## Open decisions
-- Which framework/version and which questions ship in the MVP; assessment cadence and scoring model.
+## Prototype design decisions
+- Pin the prototype's concise question set to OWASP Top 10 for LLM Applications (2025 edition) so the hallusquatting demo's explicit LLM03 Supply Chain mapping stays stable. Include cited mappings and plain-language explanations; do not imply that this is a complete framework assessment. A later framework update is a separately reviewed design change, not an automatic remapping.
+- Use Yes / No / Partial / Unknown / Not applicable answers. Save respondent and assessment date; allow a new assessment without overwriting prior answers. No automatic reassessment schedule: show a reminder/date field only.
+- Do not produce a compliance score. Show answered control gaps and their threat-related recommendation weight transparently; changes in weighting never rewrite the user's answer.

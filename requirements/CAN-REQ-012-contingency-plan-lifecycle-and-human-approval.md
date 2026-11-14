@@ -1,6 +1,6 @@
 # CAN-REQ-012: Contingency Plan Lifecycle and Human Approval
 
-**Status:** Proposed · **Priority:** MVP · **Source:** Project Plan §§4, 6, 10, 11
+**Status:** Proposed · **Priority:** Local demo prototype · **Source:** Project Plan §§4, 6, 10, 11
 
 ## Purpose
 Help organizations prepare and maintain response plans while keeping decisions with authorized personnel.
@@ -23,5 +23,7 @@ Help organizations prepare and maintain response plans while keeping decisions w
 ## Dependencies
 CAN-REQ-008, CAN-REQ-011.
 
-## Open decisions
-- Exact plan stages and status transitions, approval policy, export format, and reminder behavior.
+## Prototype design decisions
+- Use Draft → In review → Approved → Archived, with an approved plan returning to Draft when materially edited; preserve the approved version. Only Administrator approves. Cybersecurity Leads can draft/edit and submit for review. Approval requires an explicit confirmation and is audited.
+- Plans may use Preparation, Detection, Containment, Recovery, and Review stages as relevant; do not force an irrelevant stage. Each action has an owner, status, and optional due/review date and links back to its alert/guide.
+- No automated reminders or external actions. Plan export is outside the prototype; show the plan and version history in-app. Approval records human review and does not mean Canary executed or validated the plan.

@@ -3,8 +3,16 @@
 ## "Canary prepares you for the things you can't prepare for."
 
 **Project concept and initial product plan**\
-**Status:** Working concept / team discussion document\
+**Status:** Working concept; current deliverable is a local demo prototype\
 **Example customer:** Prairie Valley Medical Center (fictional)
+
+**Current prototype direction:** Build a locally run demo that represents all
+16 requirements in `requirements/`, using working local features or clearly
+labeled simulations. This is not a hosted MVP or production service. Fernwood
+Labs is the primary fictional organization for the hallusquatting walkthrough;
+Prairie Valley Medical Center remains an optional fictional example. Prototype
+defaults and production limitations are defined in `design/README.md` and in
+each requirement's Prototype design decisions section.
 
 ------------------------------------------------------------------------
 
@@ -223,15 +231,15 @@ A useful starting point is a four-level priority system.
                     urgency needs     use               
                     confirmation                        
 
-  **P3 --- Medium** Relevant industry Another hospital  Daily or
-                    event or emerging experiences a     scheduled digest
+  **P3 --- Medium** Relevant industry Another hospital  Daily digest
+                    event or emerging experiences a
                     risk that         significant       
                     deserves          outage with       
                     investigation or  lessons relevant  
                     preparation       to the customer's 
                                       operations        
 
-  **P4 ---          General industry  A weekly summary  Weekly digest or
+  **P4 ---          General industry  A daily summary   Daily digest
   Informational**   news, trends, and of healthcare     dashboard update
                     educational       cybersecurity     
                     information       developments      
@@ -257,32 +265,47 @@ These should be separate settings.
 Canary may check important sources frequently but only notify employees
 when a finding meets the organization's notification rules.
 
-Possible initial settings for a prototype:
+Current local prototype settings:
 
   -----------------------------------------------------------------------
   Activity                            Example starting frequency
   ----------------------------------- -----------------------------------
-  Check high-priority security feeds  Every 15--30 minutes, subject to
-                                      source limits
+  Check enabled sources              Hourly local schedule, plus manual
+                                      refresh; no real-time guarantee
 
-  Check general industry sources      Every 1--3 hours
+  Reassess an open threat             On meaningful new information
 
-  Reassess an open threat             When meaningful new information
-                                      arrives
+  Send P1 notification                Immediately
 
-  Send informational digest           Weekly
+  Send P2 notification                Next local processing cycle
 
-  Review unresolved alerts            Daily
+  Send P3/P4 digest                   Daily
   -----------------------------------------------------------------------
 
-These are proposed settings, not guarantees of real-time discovery.
-Actual frequency depends on source update rates, available APIs, rate
-limits, and operating costs.
+These are demo settings, not guarantees of real-time discovery. Actual
+collection depends on source update rates, available APIs, rate limits, and
+the local application being available.
+
+### Prototype email delivery
+
+The local prototype sends real test emails through a team-configured
+SMTP-compatible provider. It sends only to an explicit allowlist of
+team-owned test email addresses; all other recipients are rejected. Every
+subject includes **[CANARY DEMO - TEST]**, and each message states that it is a
+demo notification, not evidence of a real incident. Provider credentials are
+kept in local environment secrets. The application has no production-send
+mode, does not silently fall back to a mock mailbox, and records delivery
+success or failure. Collection cadence remains separate from notification
+cadence.
 
 ### Notification recipients
 
 Not every employee needs every alert. Companies should be able to assign
 recipients and escalation rules.
+
+The roles below describe the broader product concept. The local demo
+prototype implements only Administrator and Cybersecurity Lead, as specified
+in CAN-REQ-001.
 
   Team or role             Example notifications
   ------------------------ ---------------------------------------------
@@ -471,6 +494,11 @@ questionnaire about how it builds and uses AI. Examples: Do you validate
 LLM output before it reaches other systems? Who can install AI tools?
 Are API keys rotated?
 
+For the local prototype, use a concise question set pinned to the OWASP Top
+10 for LLM Applications (2025 edition), including the demo's LLM03 Supply
+Chain question. This is not a complete framework assessment; see
+CAN-REQ-010 for prototype answer choices and scoring boundaries.
+
 -   Questions map to a standard: the **NIST AI Risk Management
     Framework** and the **OWASP Top 10 for LLM Applications**.
 -   Question weights are **reweighted by current threats**: if Canary
@@ -487,9 +515,10 @@ Are API keys rotated?
 ## 8. Company accounts and permissions
 
 Canary is intended for organizations, so the account structure should
-support a company workspace with multiple employees.
+support a company workspace with multiple employees. For the local demo,
+authentication uses seeded local accounts and is not production-grade.
 
-### Suggested roles
+### Broader product role concepts
 
   Role                    Example permissions
   ----------------------- -----------------------------------------------------
@@ -499,14 +528,12 @@ support a company workspace with multiple employees.
   Executive               View organization-wide risks and reports
   Employee                View assigned information and report incidents
 
-### Login and account features
+### Local prototype account behavior
 
--   Email and password login.
--   Company creation and invitation system.
--   Optional company single sign-on (SSO).
--   Multi-factor authentication.
--   Role-based access control.
--   Separate company workspaces and data.
+-   Local demo accounts with Administrator and Cybersecurity Lead roles only.
+-   Simulated invitations using seeded accounts; no invitation email.
+-   Organization-scoped role-based access and data isolation.
+-   SSO, MFA, and production account recovery are outside prototype scope.
 
 Each company's information must remain isolated from other customers.
 Internal documents, asset inventories, and company-specific findings
@@ -561,71 +588,45 @@ filtering, and contingency planning.
 
 ------------------------------------------------------------------------
 
-## 10. Proposed minimum viable product (MVP)
+## 10. Local demo prototype
 
-The first version should demonstrate the central Canary workflow without
-attempting to become a complete enterprise security platform.
+The current deliverable is a locally run demo prototype, not a hosted MVP or
+production service. It must represent every requirement CAN-REQ-001 through
+CAN-REQ-016, using working local features or conspicuously labeled
+simulations. The design overview and individual requirement decisions define
+the exact behavior and boundaries.
 
-### MVP development order
+### Prototype implementation sequence
 
-1.  **Company registration and login**
-    -   Create company accounts.
-    -   Select an industry.
-    -   Add company details.
-    -   Configure monitoring preferences.
-2.  **Simple dashboard**
-    -   Display recent threats.
-    -   Show priority levels.
-    -   Show unread alerts.
-    -   Display saved contingency plans.
-3.  **External information collection**
-    -   Connect to a small number of public cybersecurity sources.
-    -   Retrieve new advisories and incidents.
-    -   Summarize findings with AI.
-    -   Preserve original source links and dates.
-4.  **Industry-specific filtering**
-    -   Identify affected industries and products.
-    -   Compare findings against company interests and supplied
-        inventory.
-    -   Filter irrelevant information.
-    -   Prioritize findings for review.
-5.  **Security questionnaire**
-    -   Ask framework-mapped questions (NIST AI RMF / OWASP LLM Top 10).
-    -   Weight gaps by current threats.
-    -   Save answers as persistent context.
-6.  **Guided report and contingency plan generation**
-    -   Let users select a finding or enter a scenario.
-    -   Generate a proposed plan.
-    -   Allow editing and approval.
-    -   Save plans for future reference.
-7.  **Notification system**
-    -   Send email notifications.
-    -   Implement priority-based alerts.
-    -   Provide daily or weekly summaries.
+1. Establish local startup/reset, demo accounts and roles, organization
+   isolation, data model, and secret handling.
+2. Implement organization profiles/inventory, source configuration, local
+   collection, finding normalization, evidence, and deduplication.
+3. Implement analysis with uncertainty, explainable match/priority, and the
+   framework-mapped questionnaire.
+4. Implement alert investigation, targeted guides, contingency plan review
+   and approval, dashboard, and audit history.
+5. Configure real test email delivery to an explicit team-owned address
+   allowlist. Include conspicuous test labels, delivery outcomes, and rejection
+   of every non-allowlisted address.
+6. Walk through all 16 requirements and show each on a screen, in a saved
+   record, or as a clearly labeled simulation.
 
-### Suggested initial demonstration
+### Primary demonstration
 
-Use the fictional Prairie Valley Medical Center as the test
-organization.
+Use fictional Fernwood Labs and the hallusquatting flow in
+`documents/hallusquatting-demo-flow.md`. The flow covers organization setup,
+two Cybersecurity Leads, inventory and questionnaire context, source status
+and collection, deduplication, evidence and uncertainty, a P2 Possible match,
+real test email, alert triage, a targeted guide, human-approved plan, audit
+history, and safe reset. The email goes only to a preconfigured team-owned
+test inbox and is not a production alert.
 
-Demonstrate this sequence:
-
-1.  The hospital creates a Canary account and selects healthcare as its
-    industry.
-2.  The hospital records its AI stack (for example, an AI scribe tool)
-    and completes the security questionnaire.
-3.  Canary retrieves a sample or real public AI security advisory.
-4.  The AI summarizes the advisory and explains why it may matter to the
-    hospital.
-5.  The hospital receives an alert with a priority and source links.
-6.  A user requests a contingency plan.
-7.  Canary generates a draft plan.
-8.  An authorized hospital employee reviews and approves or edits it.
-9.  The alert and plan remain available in the dashboard.
-
-For a prototype, use simulated company inventories and clearly label any
-fictional incidents or findings. Do not imply that a simulated
-vulnerability is real.
+Prairie Valley Medical Center remains an optional fictional organization for
+showing a different industry context. All fictional assets and simulated
+events must be labeled. Do not imply that fictional data or simulated
+vulnerabilities are real, or that the prototype provides production security
+or regulatory compliance.
 
 ------------------------------------------------------------------------
 

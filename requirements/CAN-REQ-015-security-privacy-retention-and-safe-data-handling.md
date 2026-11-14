@@ -1,6 +1,6 @@
 # CAN-REQ-015: Security, Privacy, Retention, and Safe Data Handling
 
-**Status:** Proposed · **Priority:** MVP · **Source:** Project Plan §§7, 8, 11
+**Status:** Proposed · **Priority:** Local demo prototype · **Source:** Project Plan §§7, 8, 11
 
 ## Purpose
 Protect customer information and ensure collection and processing practices match the product's stated boundaries.
@@ -25,5 +25,9 @@ Protect customer information and ensure collection and processing practices matc
 ## Dependencies
 Applies across all requirements; architecture choices should be reviewed against this requirement from the start.
 
-## Open decisions
-- Hosting/security baseline, encryption/key management, retention durations, deletion guarantees, incident response, model provider terms, and regulatory scope.
+## Prototype design decisions
+- Run locally on one developer machine with fictional/demo data only. Do not expose the app or database publicly and do not enter real patient, customer, credential, or other regulated data. The local prototype is not production-hardened and makes no HIPAA/compliance claim.
+- Enforce organization scoping in application queries and mutations. Keep optional model API keys and SMTP credentials in local environment secrets, excluded from version control and logs. Minimize prompt/email data and disclose provider processing/retention terms. Check every email recipient against the CAN-REQ-009 team-owned test allowlist before sending.
+- Store local data until the user invokes a full reset; reset removes seeded and user-entered organizations, findings, assessments, plans, and audit records. No backup or recovery guarantee is provided by the prototype.
+- Use only approved public source methods, respect applicable rate limits/terms, retain source links and necessary metadata, and avoid full-text article storage. Document collection and model data flows in the design.
+- Before any hosted or real-customer use, separately define encryption/key management, backups, incident response, deletion guarantees, provider contractual terms, retention periods, and regulatory scope. These remain explicit production prerequisites, not prototype claims.

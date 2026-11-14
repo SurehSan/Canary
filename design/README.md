@@ -1,130 +1,48 @@
-# Canary Design Phase Overview
+# Canary Local Prototype Design
 
-This document splits Canary's design into eight areas. Each area traces
-back to the requirements in [`../requirements/`](../requirements/README.md).
+## Purpose and scope
 
-| # | Design area | Requirements covered |
-|---|---|---|
-| DES-001 | System architecture | All |
-| DES-002 | Data model | CAN-REQ-001, 002, 005, 008, 010, 012, 014 |
-| DES-003 | Collection pipeline | CAN-REQ-003, 004, 005 |
-| DES-004 | AI analysis layer | CAN-REQ-006, 007, 011 |
-| DES-005 | Workflows and state machines | CAN-REQ-008, 012 |
-| DES-006 | UX and UI | CAN-REQ-008, 010, 011, 012, 013 |
-| DES-007 | Notifications | CAN-REQ-009 |
-| DES-008 | Security, privacy, and demo data | CAN-REQ-001, 015, 016 |
+The design target is a **locally run demo prototype**, not a hosted MVP or production service. The prototype must represent all requirements CAN-REQ-001 through CAN-REQ-016 in an end-to-end, reviewable workflow. A requirement may be represented by a working local feature, a clearly labeled simulation, or a documented boundary where production operation is intentionally out of scope. Do not imply that a simulated control provides production security, delivery, compliance, or reliability.
 
-------------------------------------------------------------------------
+The default demo organization is fictional **Fernwood Labs**, following the hallusquatting flow. **Prairie Valley Medical Center** remains an optional fictional sample organization. Demo data and simulated events are visibly labeled and separated from externally sourced findings. The walkthrough uses the hallusquatting finding with source links and dates; any simulated details are marked as such.
 
-## DES-001: System architecture
+## Design areas and requirement traceability
 
-- **Components:** Next.js frontend, FastAPI backend, PostgreSQL, a job
-  worker (Celery or Redis), the LLM provider, and the email service.
-- **Data flow:** collect → normalize → analyze → score → alert → notify.
-- **Deployment:** one machine or a hosted service for the hackathon,
-  plus how configuration and secrets are handled.
+| ID | Design area | Requirements | Required design output / demo evidence |
+|---|---|---|---|
+| DES-001 | Local architecture and data flow | CAN-REQ-001–016 | Component/data-flow diagram; local startup and reset instructions; configuration and secret handling |
+| DES-002 | Data model and tenant boundaries | CAN-REQ-001, 002, 005, 008, 010, 012, 014, 015, 016 | Entity/schema diagram; organization scoping; unknown values and version history |
+| DES-003 | Source configuration and collection | CAN-REQ-003, 004, 005, 016 | Initial source catalog; local scheduler/manual refresh behavior; status, retries, and evidence retention |
+| DES-004 | Analysis, relevance, priority, and guides | CAN-REQ-005, 006, 007, 010, 011, 016 | Output schema; deterministic match/priority rubric; model boundary; examples including uncertain match |
+| DES-005 | Roles, workflows, and state machines | CAN-REQ-001, 008, 010, 011, 012, 014 | Permission matrix; alert, guide, assessment, and plan state diagrams; audit events |
+| DES-006 | Screens and interaction design | CAN-REQ-002, 003, 008, 010, 011, 012, 013, 016 | Wireframes/screens for setup through dashboard, source status, alert, guide, and plan approval |
+| DES-007 | Test email delivery | CAN-REQ-009, 013, 016 | Priority/category routing rules; team-owned address allowlist; real test email and delivery log; failure and duplicate examples |
+| DES-008 | Privacy, safety, and demo-data controls | CAN-REQ-002, 003, 004, 005, 006, 009, 014, 015, 016 | Data-flow/retention table; local-only boundaries; simulated-data labels; safe reset procedure |
 
-## DES-002: Data model
+## Prototype decisions
 
-- **Core records:**
-  - Organization, User, Membership
-  - InventoryItem
-  - Source
-  - Finding and SourceRef
-  - Alert
-  - Assessment and Answer
-  - Guide
-  - Plan and PlanVersion
-  - AuditEvent
-- **Isolation:** every table is scoped to an organization (CAN-REQ-015).
-- **History:** how version history is stored.
-- **Uncertainty:** how values are marked as unknown or unconfirmed.
+- **Runtime:** one developer machine; local application and local persistent database. No public deployment, production email mode, SSO, or customer integrations. The prototype sends real test emails only to explicitly allowlisted, team-owned addresses.
+- **Identity:** local demo accounts, with Administrator and Cybersecurity Lead roles only. Organization selection scopes every read and write. Seed two Cybersecurity Leads to demonstrate delegation. Invites are simulated; no external invitation email is sent.
+- **Organization and inventory:** manual entry only. Organization name and industry are required; size, location, monitoring interests, inventory version, owner, criticality, and data-access notes are optional and may be unknown. No import/export or integrations in the prototype.
+- **Sources and collection:** ship a fixed, documented starter catalog (The Hacker News, CSA research notes, GitHub Security Advisories, and OWASP GenAI, as used by the demo flow). Admins can enable/disable catalog sources and monitoring areas, but cannot add arbitrary URLs. Prefer permitted RSS/API/public access. Provide a manual refresh and a local hourly schedule; surface last check and errors. No real-time guarantee.
+- **Finding identity:** normalize source items and group likely duplicates using CVE/product identifiers where present, otherwise canonical URL and normalized title. Keep each source reference. Similarity-only grouping is reviewable and correctable; corrections are audited. Store metadata, short necessary excerpts only where permitted, and source links rather than full articles.
+- **Analysis provider:** OpenAI API is the preferred optional provider, configured only through a local environment secret that is never committed or shown in logs. Provide a deterministic sample/fallback analysis so the demo works without credentials. Label fallback output as demo analysis. Treat source text as untrusted input; send only the minimum finding and organization fields needed. Do not send credentials or sensitive vendor data. Provider use and retention limitations are disclosed in the prototype.
+- **Match states and priority:** code determines match state; the model does not decide exposure. Confirmed match requires an exact product and affected-version overlap with a known inventory version. Unknown versions cannot be confirmed. Possible means a product/technology match with unresolved version or deployment evidence; industry-only is contextual relevance; no known match means no supported relationship. Priority factors are severity, exploitation evidence, match state, asset criticality, source reliability/recency, questionnaire gap, and duplication. Show each factor and its evidence. Use the hallusquatting example as P2 High / Possible match; P1 requires credible active exploitation plus a confirmed match to a critical asset. Reviewers may override with a required reason; overrides affect only that finding, not future scoring.
+- **Questionnaire:** use OWASP Top 10 for LLM Applications (2025 edition) as the prototype's primary mapping, with a small, cited question set relevant to the demo. Responses are Yes / No / Partial / Unknown / Not applicable. Scores summarize answered controls and never overwrite answers. Threat weighting can reorder recommendations and must show why.
+- **Guides:** generate from an alert without requiring questionnaire completion. Guide steps use Draft / In progress / Done / Deferred, include action, rationale, checks, technique, evidence links, and conditional status. Ask at most one targeted clarification at a time; allow Unknown. Link to authoritative OWASP/vendor guidance. Editing and progress changes are audited. No guide export in the prototype.
+- **Alerts and plans:** alerts use New, Under investigation, Exposure confirmed, Mitigation in progress, Resolved and verified, Not applicable, and Risk accepted. Exposure confirmed is a human-verified investigation outcome, never an AI inference. Plans use Draft, In review, Approved, Archived; only an Administrator can approve, while Cybersecurity Leads can investigate, assign work, edit drafts, and recommend approval. Plans use Preparation, Detection, Containment, Recovery, and Review stages as applicable. No automatic customer-system actions or reminders; plan export is out of scope.
+- **Notifications:** use a configured SMTP-compatible provider to send actual test emails only to an explicit allowlist of team-owned addresses. Prefix every subject with **[CANARY DEMO - TEST]**, include a test-mode notice in each message, and store provider credentials only in local environment secrets. Reject non-allowlisted recipients and show delivery failures; never silently fall back to a mock inbox. P1 is immediate; P2 is prompt (next local processing cycle); P3/P4 appear in a daily digest. Route by category and configured role/member; suppress unchanged repeats and notify on material changes. No production-delivery mode is exposed.
+- **Audit, privacy, and retention:** record identity, organization, action, target, timestamp, and safe before/after summary for material edits, overrides, assignments, assessments, approvals, source settings, and membership changes. Keep local prototype data until reset; provide an explicit reset that deletes all seeded and entered records. Never log API keys. Use fictional/demo data only; do not enter real patient, customer, or regulated data. Do not claim HIPAA or production compliance. Local transport/storage safeguards are documented as prototype limitations, not production controls.
+- **Dashboard:** derive counts and lists from saved records. “Requires action” means an unread New alert, an assigned alert in investigation/mitigation, a guide step awaiting a user, or a plan awaiting review/approval. Show source freshness/errors, open plans, and role-appropriate actions.
 
-## DES-003: Collection pipeline
+## Suggested design sequence
 
-- **Collection:** source adapters for RSS and APIs, a scheduler,
-  retries and error logging, and rate limiting.
-- **Normalization:** convert every item into one shared finding format.
-- **Deduplication:** match by CVE ID, URL, and title similarity.
-- **Cadence:** how often to collect is set separately from how often to
-  notify.
+1. Agree on the local runtime, data model, organization scoping, and secret/data boundaries.
+2. Define the role matrix, workflow states, source catalog, and collection/deduplication behavior.
+3. Specify the matching and priority rubric and validate it against the hallusquatting flow.
+4. Design the questionnaire, guide, plan, dashboard, and mock notification screens.
+5. Map each acceptance criterion in CAN-REQ-001 through CAN-REQ-016 to a visible screen, stored record, or explicitly labeled simulation.
 
-## DES-004: AI analysis layer
+## Completion check
 
-This is the riskiest area, so design and prototype it first.
-
-- **Prompts and output schemas:** facts, interpretation, and unknowns
-  are kept separate, and each claim cites its source.
-- **Relevance matching:** matching against the inventory is done in
-  code, not by the LLM. It produces one of four match states:
-  confirmed, possible, industry-only, or no known match.
-- **Priority:** a formula with visible factors, adjusted by
-  questionnaire answers and current threats.
-- **Guides:** step-by-step guide generation, and the rule for when a
-  missing fact justifies a follow-up question.
-- **Guardrails:** never claim the organization is exposed or
-  compromised, and define what happens when evidence is thin.
-
-## DES-005: Workflows and state machines
-
-- **Alert statuses:** New → Under investigation → Exposure confirmed →
-  Mitigation in progress → Resolved and verified. An alert can also end
-  as Not applicable or Risk accepted.
-- **Plan statuses:** Draft → In review → Approved → Archived.
-- **Permissions:** which roles can make each change, and what each
-  change writes to the audit trail.
-
-## DES-006: UX and UI
-
-- **Screens:**
-  - Onboarding and AI inventory
-  - Questionnaire
-  - Dashboard
-  - Alert list and alert detail
-  - Guide view
-  - Plan editor
-  - Settings for sources and recipients
-- **Visual language:** priority badges, match-state labels, "AI-generated
-  draft" labels, and "Simulated" banners.
-- **Wireframes:** based on the
-  [Fernwood demo flow](../demo/hallusquatting-demo-flow.md).
-
-## DES-007: Notifications
-
-- **Routing:** recipients chosen by alert category and role.
-- **Timing:** immediate sends for critical alerts, digests for
-  everything else.
-- **Duplicates:** don't re-send an unchanged finding; send an update
-  when something meaningful changes.
-- **Templates:** email layouts for alerts, updates, and digests.
-- **Test mode:** separate test and production modes, with a safety
-  switch that only allows mock inboxes.
-
-## DES-008: Security, privacy, and demo data
-
-- **Access:** login provider choice (Auth0 or another), roles enforced on
-  the server, and data kept separate for each organization.
-- **LLM data:** what customer data is allowed into model prompts.
-- **Retention:** how long data is kept and how it's deleted.
-- **Demo data:** seed data for Fernwood Labs and Prairie Valley Medical
-  Center, labeled as simulated.
-
-------------------------------------------------------------------------
-
-## Suggested order
-
-1. Data model (DES-002) and architecture (DES-001), since everything
-   depends on them.
-2. AI analysis layer (DES-004), because it's the riskiest.
-3. Collection pipeline (DES-003).
-4. Workflows (DES-005) and UX (DES-006).
-5. Notifications (DES-007).
-6. Security (DES-008).
-7. Demo seed data.
-
-## Checking the design against the demo
-
-Walk through the
-[Fernwood demo flow](../demo/hallusquatting-demo-flow.md) step by step.
-Every step should land on a specific component, table, and screen. If
-one doesn't, the design is missing something.
+The design is ready for prototype implementation when each requirement has (a) a named design decision, (b) a corresponding screen, data record, or simulated behavior, and (c) a walkthrough step that demonstrates it. Record intentional production exclusions as prototype boundaries, not unresolved decisions. Validate the end-to-end flow in [the Fernwood hallusquatting demo](../documents/hallusquatting-demo-flow.md). The requirements index is [here](../requirements/README.md).

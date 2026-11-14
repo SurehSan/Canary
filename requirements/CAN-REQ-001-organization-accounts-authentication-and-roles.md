@@ -1,12 +1,12 @@
 # CAN-REQ-001: Organization Accounts, Authentication, and Roles
 
-**Status:** Proposed · **Priority:** MVP · **Source:** Project Plan §§3, 8, 10
+**Status:** Proposed · **Priority:** Local demo prototype · **Source:** Project Plan §§3, 8, 10
 
 ## Purpose
 Provide a company workspace where multiple people can use Canary with permissions appropriate to their responsibilities.
 
 ## Scope
-Create an organization, authenticate members, invite users, assign roles, and enforce permissions within the organization. SSO is optional and not required for the first demonstrable MVP unless selected as an implementation decision.
+Create an organization, authenticate members, invite users, assign roles, and enforce permissions within the organization. The local prototype uses demo authentication; external identity providers and SSO are outside its scope.
 
 ## Requirements
 1. A user can register and sign in using the selected authentication mechanism.
@@ -29,7 +29,8 @@ Create an organization, authenticate members, invite users, assign roles, and en
 ## Dependencies
 None. Provides identity and organization context for most other requirements.
 
-## Open decisions
-- Authentication provider and password/SSO support for MVP.
-- Exact permission matrix for each role, invitation expiry, and whether one user may join multiple organizations.
-- MFA requirement and recovery process.
+## Prototype design decisions
+- Use local demo accounts with seeded credentials and no external identity provider, SSO, MFA, or account recovery flow. Clearly mark this authentication as demo-only.
+- Support Administrator and Cybersecurity Lead only, as specified in the requirement note. Administrators create organizations, manage members and source settings, and approve plans. Cybersecurity Leads can investigate and assign alerts, edit guides and draft plans, and recommend approval; they cannot manage membership or approve plans.
+- An Administrator may invite another demo user by selecting a seeded account; invitations are simulated and do not send email. Support membership revocation and show that the revoked account loses access.
+- Users may belong to multiple demo organizations. Every query and mutation must be scoped to the currently selected organization; demonstrate isolation with two fictional organizations. MFA/recovery are outside the local prototype boundary.

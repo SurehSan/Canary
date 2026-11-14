@@ -1,6 +1,6 @@
 # CAN-REQ-011: Step-by-Step Threat Guide and Mitigation Techniques
 
-**Status:** Proposed · **Priority:** MVP · **Source:** sureh.md; Project Plan §§1, 6, 7a, 10
+**Status:** Proposed · **Priority:** Local demo prototype · **Source:** sureh.md; Project Plan §§1, 6, 7a, 10
 
 ## Purpose
 Turn a threat or supported scenario into a clear, ordered guide that helps an organization assess relevance and work through appropriate mitigation techniques. The output should guide a user through decisions and actions, rather than present a single undifferentiated list of recommendations.
@@ -37,7 +37,8 @@ Turn a threat or supported scenario into a clear, ordered guide that helps an or
 ## Dependencies
 CAN-REQ-006 and CAN-REQ-007. CAN-REQ-010 is used conditionally when targeted questionnaire clarification is needed; it is not a prerequisite for generating a guide. CAN-REQ-012 may consume the reviewed guide to create a contingency plan.
 
-## Open decisions
-- Step status vocabulary and guide layout.
-- Which framework references or mitigation catalogs should be linked to steps in the MVP.
-- Whether guide export is required and what formats to support.
+## Prototype design decisions
+- Each guide step has Draft, In progress, Done, or Deferred status and displays action, rationale, evidence/checks, technique, source/framework links, and any condition that must be verified. Keep the guide editable and preserve changes in history.
+- Generate the initial guide directly from the alert; ask only a targeted question when a missing fact materially changes guidance. Ask one at a time, accept Unknown/Not applicable, and retain conditional steps when unanswered. The hallusquatting flow demonstrates the production install-permission question.
+- Link to relevant OWASP Top 10 for LLM Applications (2025 edition) guidance and authoritative vendor/advisory sources. Label all generated content “AI-generated draft for human review.” Do not execute actions or claim exposure.
+- Guide export is outside the local prototype; users can view and edit it in the application and create a linked plan.

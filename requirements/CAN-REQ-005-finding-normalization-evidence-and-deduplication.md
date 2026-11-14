@@ -1,6 +1,6 @@
 # CAN-REQ-005: Finding Normalization, Evidence, and Deduplication
 
-**Status:** Proposed · **Priority:** MVP · **Source:** Project Plan §§4, 5, 6, 7, 11
+**Status:** Proposed · **Priority:** Local demo prototype · **Source:** Project Plan §§4, 5, 6, 7, 11
 
 ## Purpose
 Turn collected records into traceable findings that can be compared, updated, and shown without losing their evidence.
@@ -22,6 +22,7 @@ Turn collected records into traceable findings that can be compared, updated, an
 ## Dependencies
 CAN-REQ-004.
 
-## Open decisions
-- Canonical identity and duplicate matching policy, including human correction capability.
-- How much source text may be stored and for how long, subject to source terms and CAN-REQ-015.
+## Prototype design decisions
+- Prefer exact CVE/advisory identifiers, then affected product plus vendor identifier, then canonical URL; use normalized title similarity only to propose a duplicate for human review, never as sole proof. Preserve distinct source references and dates under a canonical finding.
+- Authorized users can confirm or undo a proposed grouping; record the correction in history. Meaningful source updates revise the current finding while preserving prior values.
+- Retain normalized metadata, citations, and only short source excerpts needed for the demo where terms permit. Avoid storing full articles. Local records persist until the explicit demo reset; see CAN-REQ-015.
