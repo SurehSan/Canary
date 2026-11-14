@@ -6,6 +6,8 @@ from pathlib import Path
 
 from flask import Flask
 
+from .notify import parse_allowlist, parse_recipients
+
 
 def create_app(config=None):
     app = Flask(__name__, instance_relative_config=True)
@@ -17,6 +19,22 @@ def create_app(config=None):
         RETRY_SLEEP_SECONDS=0.2,
         START_SCHEDULER=os.environ.get("CANARY_SCHEDULER", "1") == "1",
         SCHEDULE_SECONDS=3600,
+        NOTIFY_CYCLE_SECONDS=60,
+        DIGEST_SECONDS=86400,
+        # CAN-REQ-009 test email. Credentials come only from the environment / local .env.
+        SMTP_HOST=os.environ.get("CANARY_SMTP_HOST") or None,
+        SMTP_PORT=int(os.environ.get("CANARY_SMTP_PORT") or 587),
+        SMTP_USERNAME=os.environ.get("CANARY_SMTP_USERNAME") or None,
+        SMTP_PASSWORD=os.environ.get("CANARY_SMTP_PASSWORD") or None,
+        SMTP_STARTTLS=os.environ.get("CANARY_SMTP_STARTTLS", "1") == "1",
+        SMTP_SSL=os.environ.get("CANARY_SMTP_SSL", "0") == "1",
+        MAIL_FROM=os.environ.get("CANARY_MAIL_FROM") or None,
+        EMAIL_ALLOWLIST=parse_allowlist(os.environ.get("CANARY_EMAIL_ALLOWLIST")),
+        TEST_RECIPIENTS=parse_recipients(os.environ.get("CANARY_TEST_RECIPIENTS")),
+        APP_BASE_URL=os.environ.get("CANARY_BASE_URL") or "http://127.0.0.1:5000",
+        LIVE_SOURCES=os.environ.get("CANARY_LIVE_SOURCES", "0") == "1",
+        LIVE_MIN_INTERVAL_SECONDS=900,
+        HTTP_GET=None,
     )
     if config:
         app.config.update(config)

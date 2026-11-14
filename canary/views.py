@@ -1,12 +1,17 @@
 import json
 from datetime import datetime, timedelta
 
-from flask import Blueprint, abort, flash, g, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, current_app, flash, g, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash
 
 from .auth import ROLE_LABELS, actor_label, login_required, org_required, role_required
-from .collector import FIXTURE_ADAPTER, bump_revision, run_collection, snapshot_revision
+from .collector import FIXTURE_ADAPTER, bump_revision, ingest_item, run_collection, snapshot_revision
 from .db import audit, get_db, now_iso
+from .delivery import (SIMULATE_KEY, dispatch, enqueue_for_alert, get_setting, process_digest, process_queue,
+                       send_test, set_setting, smtp_status)
+from .fixtures import FOLLOWUP_ITEMS
+from .live import LIVE_FEEDS
+from .notify import SUBJECT_PREFIX, check_recipient
 from .pipeline import process_findings
 from .scoring import MATCH_LABELS, PRIORITY_LABELS
 from .seed import reset_demo
@@ -101,10 +106,10 @@ def source_health(db, org_id, now):
         " WHERE os.org_id=? ORDER BY c.id", (org_id,)).fetchall()
     out = []
     for s in rows:
-        last = db.execute("SELECT * FROM collection_runs WHERE source_id=? ORDER BY id DESC LIMIT 1",
-                          (s["id"],)).fetchone()
-        last_ok = db.execute("SELECT finished_at FROM collection_runs WHERE source_id=? AND outcome!='failed'"
-                             " ORDER BY id DESC LIMIT 1", (s["id"],)).fetchone()
+        last = db.execute("SELECT * FROM collection_runs WHERE source_id=? AND outcome!='skipped'"
+                          " ORDER BY id DESC LIMIT 1", (s["id"],)).fetchone()
+        last_ok = db.execute("SELECT finished_at FROM collection_runs WHERE source_id=? AND outcome IN"
+                             " ('success','success_no_new') ORDER BY id DESC LIMIT 1", (s["id"],)).fetchone()
         if not s["enabled"]:
             state = "Disabled"
         elif last is None:
@@ -192,7 +197,13 @@ def sources():
     runs = db.execute("SELECT r.*, c.name FROM collection_runs r JOIN source_catalog c ON c.id=r.source_id"
                       " JOIN org_sources os ON os.source_id=c.id AND os.org_id=?"
                       " ORDER BY r.id DESC LIMIT 12", (g.org["id"],)).fetchall()
-    return render_template("sources.html", health=health, runs=runs)
+    items = db.execute("SELECT si.*, r.adapter FROM source_items si LEFT JOIN collection_runs r ON r.id=si.collection_run_id"
+                       " WHERE si.source_id IS NULL OR si.source_id IN"
+                       " (SELECT source_id FROM org_sources WHERE org_id=? AND enabled=1)"
+                       " ORDER BY si.id DESC LIMIT 15", (g.org["id"],)).fetchall()
+    return render_template("sources.html", health=health, runs=runs, items=items,
+                           live_on=current_app.config.get("LIVE_SOURCES"), live_feeds=LIVE_FEEDS,
+                           followup_done=db.execute("SELECT 1 FROM source_items WHERE source_id IS NULL").fetchone())
 
 
 @bp.post("/sources/<int:source_id>/toggle")
@@ -286,7 +297,12 @@ def alert_detail(alert_id):
     history = db.execute("SELECT * FROM audit_events WHERE org_id=? AND target_type='alert' AND target_id=?"
                          " ORDER BY id DESC", (g.org["id"], alert_id)).fetchall()
     cite = {i["id"]: n for n, i in enumerate(items, start=1)}
+    notes = db.execute("SELECT n.*, u.display_name FROM notifications n LEFT JOIN users u ON u.id=n.user_id"
+                       " WHERE n.alert_id=? AND n.org_id=? ORDER BY n.id DESC", (alert_id, g.org["id"])).fetchall()
+    overrider = db.execute("SELECT display_name FROM users WHERE id=?", (rel["override_by"],)).fetchone() \
+        if rel["override_by"] else None
     return render_template("alert.html", alert=alert, finding=finding, items=items, rel=rel, analysis=analysis,
+                           notes=notes, overrider=overrider,
                            analysis_row=analysis_row, members=members, revisions=revisions, history=history,
                            cite=cite, next_states=ALERT_TRANSITIONS.get(alert["status"], []),
                            note_required=NOTE_REQUIRED)
@@ -360,6 +376,199 @@ def grouping(alert_id, item_id, action):
     process_findings(db, touched, actor_label())
     commit()
     return redirect(url_for("main.alert_detail", alert_id=alert_id))
+
+
+@bp.post("/alerts/<int:alert_id>/override")
+@role_required("admin", "lead")
+def override_relevance(alert_id):
+    """Reviewer override for this finding only; scoring rules and other findings are untouched."""
+    db = get_db()
+    alert = org_alert_or_404(alert_id)
+    priority = request.form.get("priority") or None
+    match = request.form.get("match_state") or None
+    reason = request.form.get("reason", "").strip()
+    if not reason:
+        abort(400, description="A reason is required to override priority or relevance.")
+    if priority not in (None, "P1", "P2", "P3", "P4") or (match is not None and match not in MATCH_LABELS):
+        abort(400, description="Unknown priority or match state.")
+    rel = db.execute("SELECT * FROM relevance WHERE org_id=? AND finding_id=?",
+                     (g.org["id"], alert["finding_id"])).fetchone()
+    before = {"priority": rel["override_priority"] or rel["priority"],
+              "match_state": rel["override_match_state"] or rel["match_state"]}
+    db.execute("UPDATE relevance SET override_priority=?, override_match_state=?, override_reason=?, override_by=?,"
+               " override_at=? WHERE id=?", (priority, match, reason, g.user["id"], now_iso(), rel["id"]))
+    after = {"priority": priority or rel["priority"], "match_state": match or rel["match_state"]}
+    audit(db, org_id=g.org["id"], actor_id=g.user["id"], actor_label=actor_label(), action="relevance.overridden",
+          target_type="alert", target_id=alert_id, summary=f"Reviewer override. Reason: {reason}",
+          before=before, after=after)
+    change = (f"Reviewer override by {g.user['display_name']} ({before['priority']} -> {after['priority']}): "
+              f"{reason}")
+    enqueue_for_alert(db, alert_id, "update", change=change, actor_label=actor_label())
+    commit()
+    return redirect(url_for("main.alert_detail", alert_id=alert_id))
+
+
+@bp.post("/sources/followup")
+@role_required("admin")
+def followup_evidence():
+    """Demo step: a later report arrives and attaches to the existing finding (CAN-REQ-005 update)."""
+    db = get_db()
+    touched = set()
+    for raw in FOLLOWUP_ITEMS:
+        fid = ingest_item(db, raw, None, None, source_label="Additional evidence (demo follow-up)", tier="C")
+        if fid:
+            touched.add(fid)
+    process_findings(db, touched, actor_label())
+    audit(db, org_id=g.org["id"], actor_id=g.user["id"], actor_label=actor_label(), action="evidence.followup",
+          target_type="finding", target_id=next(iter(touched), None),
+          summary="Demo step: follow-up report delivered" if touched else "Follow-up report was already attached")
+    commit()
+    flash("Follow-up report attached as additional evidence." if touched
+          else "The follow-up report is already attached.")
+    return redirect(url_for("main.sources"))
+
+
+# ---------------------------------------------------------------- notifications
+def _active_member(db, uid):
+    return db.execute("SELECT 1 FROM memberships WHERE org_id=? AND user_id=? AND status='active'",
+                      (g.org["id"], uid)).fetchone() is not None
+
+
+def _outcomes(results):
+    return ", ".join(f"{results.count(s)} {s}" for s in sorted(set(results))) or "nothing to send"
+
+
+@bp.route("/notifications")
+@org_required
+def notifications():
+    db = get_db()
+    oid = g.org["id"]
+    members = db.execute(
+        "SELECT u.id, u.display_name, m.role, nr.email FROM memberships m JOIN users u ON u.id=m.user_id"
+        " LEFT JOIN notification_recipients nr ON nr.org_id=m.org_id AND nr.user_id=m.user_id"
+        " WHERE m.org_id=? AND m.status='active' ORDER BY u.id", (oid,)).fetchall()
+    rules = db.execute("SELECT nr.*, u.display_name FROM notification_rules nr JOIN users u ON u.id=nr.user_id"
+                       " WHERE nr.org_id=? ORDER BY nr.category, u.id", (oid,)).fetchall()
+    log = db.execute("SELECT n.*, u.display_name FROM notifications n LEFT JOIN users u ON u.id=n.user_id"
+                     " WHERE n.org_id=? ORDER BY n.id DESC LIMIT 50", (oid,)).fetchall()
+    smtp_ok, smtp_msg = smtp_status()
+    allow = current_app.config.get("EMAIL_ALLOWLIST") or set()
+    return render_template("notifications.html", members=members, rules=rules, log=log, smtp_ok=smtp_ok,
+                           smtp_msg=smtp_msg, allowlist=sorted(allow), allow=allow, check_recipient=check_recipient,
+                           simulate=get_setting(db, oid, SIMULATE_KEY) == "1", SUBJECT_PREFIX=SUBJECT_PREFIX,
+                           has_password=bool(current_app.config.get("SMTP_PASSWORD")))
+
+
+@bp.post("/notifications/recipients")
+@role_required("admin")
+def set_recipient():
+    db = get_db()
+    uid = request.form.get("user_id", type=int)
+    email = request.form.get("email", "").strip()
+    if not _active_member(db, uid):
+        abort(400, description="Recipient must be an active member of this organization.")
+    if email:
+        db.execute("INSERT INTO notification_recipients (org_id, user_id, email, updated_at) VALUES (?,?,?,?)"
+                   " ON CONFLICT(org_id, user_id) DO UPDATE SET email=excluded.email, updated_at=excluded.updated_at",
+                   (g.org["id"], uid, email, now_iso()))
+    else:
+        db.execute("DELETE FROM notification_recipients WHERE org_id=? AND user_id=?", (g.org["id"], uid))
+    audit(db, org_id=g.org["id"], actor_id=g.user["id"], actor_label=actor_label(),
+          action="notification.recipient_set", target_type="user", target_id=uid,
+          summary="Test address " + ("set" if email else "removed"))
+    commit()
+    problem = check_recipient(email, current_app.config.get("EMAIL_ALLOWLIST") or set()) if email else None
+    flash("Saved." + (f" Warning: {problem} Sends to this address will be rejected." if problem else ""))
+    return redirect(url_for("main.notifications"))
+
+
+@bp.post("/notifications/rules")
+@role_required("admin")
+def add_rule():
+    db = get_db()
+    uid = request.form.get("user_id", type=int)
+    category = request.form.get("category", "cybersecurity")
+    if category != "cybersecurity" or not _active_member(db, uid):
+        abort(400, description="Unknown category or member.")
+    db.execute("INSERT OR IGNORE INTO notification_rules (org_id, category, user_id) VALUES (?,?,?)",
+               (g.org["id"], category, uid))
+    audit(db, org_id=g.org["id"], actor_id=g.user["id"], actor_label=actor_label(), action="notification.rule_added",
+          target_type="user", target_id=uid, summary=f"Route {category} alerts to member #{uid}")
+    commit()
+    return redirect(url_for("main.notifications"))
+
+
+@bp.post("/notifications/rules/<int:rule_id>/delete")
+@role_required("admin")
+def delete_rule(rule_id):
+    db = get_db()
+    if not db.execute("DELETE FROM notification_rules WHERE id=? AND org_id=?", (rule_id, g.org["id"])).rowcount:
+        abort(404)
+    audit(db, org_id=g.org["id"], actor_id=g.user["id"], actor_label=actor_label(),
+          action="notification.rule_removed", target_type="notification_rule", target_id=rule_id,
+          summary="Routing rule removed")
+    commit()
+    return redirect(url_for("main.notifications"))
+
+
+@bp.post("/notifications/process")
+@role_required("admin")
+def process_notifications():
+    db = get_db()
+    results = process_queue(db, g.org["id"], actor_label())
+    commit()
+    flash(f"Processing cycle ran for {len(results)} queued P1/P2 message(s): {_outcomes(results)}.")
+    return redirect(url_for("main.notifications"))
+
+
+@bp.post("/notifications/digest")
+@role_required("admin")
+def run_digest():
+    db = get_db()
+    results = process_digest(db, g.org["id"], actor_label())
+    commit()
+    flash(f"Daily digest ran for {len(results)} recipient(s): {_outcomes(results)}.")
+    return redirect(url_for("main.notifications"))
+
+
+@bp.post("/notifications/simulate-failure")
+@role_required("admin")
+def toggle_delivery_failure():
+    db = get_db()
+    new = "0" if get_setting(db, g.org["id"], SIMULATE_KEY) == "1" else "1"
+    set_setting(db, g.org["id"], SIMULATE_KEY, new)
+    audit(db, org_id=g.org["id"], actor_id=g.user["id"], actor_label=actor_label(), action="notification.simulation",
+          target_type="organization", target_id=g.org["id"],
+          summary=f"Demo simulation: delivery failure {'on' if new == '1' else 'off'}")
+    commit()
+    return redirect(url_for("main.notifications"))
+
+
+@bp.post("/notifications/<int:notif_id>/retry")
+@role_required("admin")
+def retry_notification(notif_id):
+    db = get_db()
+    n = db.execute("SELECT * FROM notifications WHERE id=? AND org_id=?", (notif_id, g.org["id"])).fetchone()
+    if n is None:
+        abort(404)
+    if n["status"] not in ("failed", "blocked", "rejected"):
+        abort(400, description="Only failed, blocked, or rejected messages can be retried.")
+    if n["attempts"] >= 3:
+        abort(400, description="Retry limit reached (3 attempts).")
+    status = dispatch(db, notif_id, actor_label())
+    commit()
+    flash(f"Retry result: {status}.")
+    return redirect(url_for("main.notifications"))
+
+
+@bp.post("/notifications/test")
+@role_required("admin")
+def test_notification():
+    db = get_db()
+    status = send_test(db, g.org["id"], request.form.get("email", ""), actor_label())
+    commit()
+    flash(f"Delivery check: {status}.")
+    return redirect(url_for("main.notifications"))
 
 
 # ---------------------------------------------------------------- audit / demo

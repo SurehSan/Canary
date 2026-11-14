@@ -6,6 +6,10 @@
 PRAGMA foreign_keys = ON;
 
 DROP TABLE IF EXISTS audit_events;
+DROP TABLE IF EXISTS notifications;
+DROP TABLE IF EXISTS notification_rules;
+DROP TABLE IF EXISTS notification_recipients;
+DROP TABLE IF EXISTS org_settings;
 DROP TABLE IF EXISTS answers;
 DROP TABLE IF EXISTS assessments;
 DROP TABLE IF EXISTS questions;
@@ -97,7 +101,7 @@ CREATE TABLE collection_runs (
     adapter TEXT NOT NULL,
     started_at TEXT NOT NULL,
     finished_at TEXT,
-    outcome TEXT CHECK (outcome IN ('success', 'success_no_new', 'failed')),
+    outcome TEXT CHECK (outcome IN ('success', 'success_no_new', 'failed', 'skipped')),
     attempts INTEGER NOT NULL DEFAULT 0,
     new_items INTEGER NOT NULL DEFAULT 0,
     error TEXT
@@ -229,4 +233,51 @@ CREATE TABLE audit_events (
     before_state TEXT,
     after_state TEXT,
     created_at TEXT NOT NULL
+);
+
+CREATE TABLE org_settings (
+    org_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    key TEXT NOT NULL,
+    value TEXT NOT NULL,
+    PRIMARY KEY (org_id, key)
+);
+
+-- Team-owned test address per member. Sends still require the env allowlist.
+CREATE TABLE notification_recipients (
+    org_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    email TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (org_id, user_id)
+);
+
+CREATE TABLE notification_rules (
+    id INTEGER PRIMARY KEY,
+    org_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    category TEXT NOT NULL,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE (org_id, category, user_id)
+);
+
+CREATE TABLE notifications (
+    id INTEGER PRIMARY KEY,
+    org_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    alert_id INTEGER REFERENCES alerts(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES users(id),
+    kind TEXT NOT NULL CHECK (kind IN ('new', 'update', 'test')),
+    cadence TEXT NOT NULL CHECK (cadence IN ('immediate', 'prompt', 'digest', 'manual')),
+    priority TEXT,
+    fingerprint TEXT,
+    change_summary TEXT,
+    status TEXT NOT NULL CHECK (status IN ('pending', 'sent', 'failed', 'rejected', 'blocked', 'suppressed')),
+    recipient_email TEXT,
+    subject TEXT,
+    body TEXT,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    simulated INTEGER NOT NULL DEFAULT 0,
+    error TEXT,
+    digest_batch TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    sent_at TEXT
 );

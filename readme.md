@@ -32,15 +32,40 @@ Demo accounts (fictional, demo-only authentication, password `demo` for all):
 
 ### Environment variables (all optional)
 
+Copy [.env.example](.env.example) to `.env` (git-ignored; read only by
+`run.py`, never by tests). Existing environment variables take precedence.
+
 | Variable | Purpose | Default |
 |---|---|---|
 | `CANARY_SECRET_KEY` | Flask session key | random per process (sessions end on restart) |
 | `CANARY_DATABASE` | SQLite file path | `instance/canary.sqlite` (git-ignored) |
 | `CANARY_FIXED_NOW` | Freeze "now" (ISO 8601) for reproducible scores | real clock |
-| `CANARY_SCHEDULER` | `1` runs the local hourly collection thread, `0` disables | `1` |
+| `CANARY_SCHEDULER` | `1` runs the background schedule (P1/P2 queue every minute, collection hourly, digest daily) | `1` |
+| `CANARY_SMTP_HOST`, `_PORT`, `_USERNAME`, `_PASSWORD`, `_STARTTLS`, `_SSL` | SMTP provider for real test email | unset = sends are **Blocked** |
+| `CANARY_MAIL_FROM` | From address | unset = Blocked |
+| `CANARY_EMAIL_ALLOWLIST` | Comma-separated team-owned addresses; the only possible recipients | empty = **every recipient rejected** |
+| `CANARY_TEST_RECIPIENTS` | `user=addr,...` maps demo people to test addresses at seed/reset | none |
+| `CANARY_BASE_URL` | Link base in emails | `http://127.0.0.1:5000` |
+| `CANARY_LIVE_SOURCES` | `1` also reads The Hacker News public RSS (AI-related items only, ≥15 min apart) | `0` (offline fixtures only) |
 
-SMTP and model-provider variables arrive with the notification slice; secrets go
-only in a local `.env` (git-ignored) and are never logged.
+The SMTP password is read from the environment only. It is never stored in the
+database, shown on a page, or written to the audit log (a test checks this).
+
+### Test email safety (CAN-REQ-009)
+
+Each send runs these checks in order: (1) the recipient must have a test
+address, or the send is **Blocked**; (2) the address must be on the
+`CANARY_EMAIL_ALLOWLIST`, or it is **Rejected** with no SMTP connection;
+(3) SMTP must be configured, or it is **Blocked**; (4) the "Simulate delivery
+failure" demo switch produces **Failed (simulated)** with no SMTP contact;
+(5) otherwise the app sends through SMTP and records **Sent** only if the server
+accepted the message, or **Failed** with the SMTP error. There is no
+production mode and no mock-inbox fallback. Unchanged reassessments are
+**Suppressed**; material changes (priority, relevance, exploitation status,
+affected products, or source evidence) send an **Update**. Automated tests use
+a local SMTP capture server ([tests/smtp_capture.py](tests/smtp_capture.py)).
+**Real inbox delivery has not been verified**: no team SMTP account or test
+address was available when this was built.
 
 ## Technical decisions (recorded per the implementation plan)
 
@@ -90,7 +115,19 @@ HTTP routes (form posts; session cookie auth):
 | `GET /alerts?priority=&status=&category=&since=&unread=1`, `GET /alerts/<id>` | member | alert list and detail |
 | `POST /alerts/<id>/assign` (`assignee_id`), `POST /alerts/<id>/status` (`status`, `note`) | admin, lead | investigation; invalid transition → 400 |
 | `POST /alerts/<id>/grouping/<item_id>/confirm|undo` | admin, lead | review a proposed duplicate grouping |
+| `POST /alerts/<id>/override` (`priority`, `match_state`, `reason` required) | admin, lead | reviewer override for this finding only |
+| `POST /sources/followup` | admin | demo step: attach the later Xygeni report as additional evidence |
+| `GET /notifications` | member | SMTP/allowlist status, recipients, routing rules, delivery log |
+| `POST /notifications/recipients` (`user_id`, `email`), `POST /notifications/rules` (`user_id`, `category`), `POST /notifications/rules/<id>/delete` | admin | recipient mapping and routing |
+| `POST /notifications/process`, `POST /notifications/digest` | admin | run the P1/P2 processing cycle / the P3/P4 daily digest now |
+| `POST /notifications/simulate-failure`, `POST /notifications/<id>/retry`, `POST /notifications/test` (`email`) | admin | demo failure switch, retry (max 3 attempts), delivery check to any address (rejected unless allowlisted) |
 | `GET /audit`, `POST /demo/reset` | member / admin | audit history; full reset |
+
+`notifications.status ∈ {pending, sent, failed, rejected, blocked, suppressed}`,
+`kind ∈ {new, update, test}`, `cadence ∈ {immediate, prompt, digest, manual}`,
+`simulated = 1` marks a demo-simulated failure. `collection_runs.adapter` is
+`Offline fixture adapter (demo)` or `Live RSS`, and `outcome` also allows
+`skipped` (live fetch inside the minimum interval).
 
 ### Priority rubric (CAN-REQ-007)
 
@@ -105,7 +142,7 @@ Confirmed match to a Critical asset. Seeded Fernwood result:
 recency term drops by 1 once the newest source is more than 180 days old,
 after 2027-01-04, which still leaves P2).
 
-## Walkthrough so far (slice 1)
+## Walkthrough so far (slices 1–2)
 
 1. Sign in as `wyatt`. The dashboard shows the **Demo data** banner and 0 alerts.
 2. **Organization**: profile, inventory (runtime agent version **Unknown**),
@@ -123,29 +160,45 @@ after 2027-01-04, which still leaves P2).
    investigation**. The dashboard and audit history update from saved records.
 7. Sign in as `priya`: Prairie Valley has no alert, and Fernwood alert URLs
    return 404.
+8. **Notifications** (as `wyatt`): the page shows the test-mode notice, SMTP
+   status, the allowlist, and the routing rule (Cybersecurity alerts go to Sureh).
+   Enter Sureh's team test address and press **Run processing cycle**. The P2
+   alert is sent, or shown as Blocked or Rejected. Use **Send delivery check**
+   with an address off the allowlist to show it is rejected before sending.
+   Turn on **Simulate delivery failure**, send, then **Retry**.
+9. **Sources → Demo step: deliver later follow-up report (Xygeni)**: it attaches
+   as a third source (a proposed grouping). The alert shows "Updated evidence",
+   and the next cycle sends an **Update** email. Confirming a grouping changes
+   nothing material, so it is **Suppressed**.
+10. On the alert, **Override** to P3 with a reason. The computed and override
+    values both stay visible, and the update goes to the daily digest.
 
 ## Requirement coverage status
 
-| Req | Slice 1 status |
+| Req | Status after slice 2 |
 |---|---|
 | 001 | Demo accounts, roles, org selection, server-side role checks, revocation. **Pending:** create org, simulated invite, role change |
 | 002 | Profile and inventory with Unknown values (read-only). **Pending:** edit forms |
-| 003 / 004 | Catalog, enable/disable, manual + hourly collection, run log, retries, simulated outage. Live RSS/API adapters not built (offline fixtures, labeled) |
-| 005 | Canonical finding, exact/proposed grouping, confirm/undo, revisions. **Pending:** Xygeni follow-up evidence step |
+| 003 / 004 | Catalog, enable/disable, manual + hourly collection, run log with adapter, retries, simulated outage, optional live THN RSS with min-interval skip, collected-items list |
+| 005 | Canonical finding, exact/proposed grouping, confirm/undo, revisions, follow-up evidence update |
 | 006 | Deterministic demo analysis with citations, unknowns, conflicts. **Pending:** user correction UI, optional OpenAI provider |
-| 007 | Match states, full rubric, P1 gate, factor display. **Pending:** override with reason |
-| 008 | List, filters, unread, assignment, all statuses with transition rules and note requirement |
-| 009 | **Pending** (SMTP allowlist slice) |
+| 007 | Match states, full rubric, P1 gate, factor display, reviewer override with reason |
+| 008 | List, filters, unread, assignment, all statuses with transition rules and note requirement, update indicator |
+| 009 | Allowlist-before-send, routing by category/member, P1 immediate / P2 cycle / P3–P4 digest, suppression, updates, failure + retry, delivery log, test labels. **Unverified:** real inbox delivery (no SMTP account) |
 | 010 | Seeded questions and assessment history (read-only). **Pending:** new assessment form |
 | 011 / 012 | **Pending** (guide, plan, approval) |
 | 013 | Dashboard counts from records, source health (Failed/Stale/Never checked). **Pending:** open plans, guide steps |
-| 014 | Audit events for login, membership, sources, collection, alerts, grouping |
-| 015 | Org scoping, 404 on cross-org access, local-only binding, reset. **Pending:** data-flow disclosure page |
-| 016 | Demo banner, fictional labels, source notes, reset |
+| 014 | Audit events for login, membership, sources, collection, alerts, grouping, overrides, notifications |
+| 015 | Org scoping, 404 on cross-org access, local-only binding, reset, secrets env-only. **Pending:** data-flow disclosure page |
+| 016 | Demo banner, fictional labels, source notes, reset, simulation labels |
 
 ## Known limitations
 
-- Collection reads stored fixture records; no live network fetching yet.
+- Offline fixture records are the default. Live mode covers only The Hacker
+  News RSS; CSA, GitHub Security Advisories, and OWASP GenAI stay offline.
+  Live items that match no curated technique get a minimal "unverified" analysis
+  and usually no alert.
+- Real SMTP delivery is implemented but has not been verified against a real inbox.
 - Session key is random per process unless `CANARY_SECRET_KEY` is set.
 - The audit log is an application history, not tamper-proof.
 - Grouping confirm/undo changes a global finding, which affects every
