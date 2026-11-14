@@ -78,6 +78,7 @@ address was available when this was built.
 | Collection | Offline fixture adapter holding real article metadata; per-source runs, 3 attempts with bounded backoff | Demo must work without network |
 | Analysis | Deterministic, curated, citation-checked demo analysis; no API key needed | CAN-REQ-006 fallback; optional OpenAI provider is later work |
 | Match/priority | Pure functions in [canary/scoring.py](canary/scoring.py) | Code, not the model, decides match state and priority |
+| Brand | Logo from [design/logo.png](design/logo.png); web-sized transparent copies in `canary/static/brand/` built by `python design/make_brand_assets.py`; palette in [canary/static/canary.css](canary/static/canary.css) (canary `#ffcc00`, amber `#f2aa00`, navy `#0a1a36`, cream `#fbf9ec`; light and dark modes) | Matches the Canary logo; one script regenerates every size |
 
 ## Data model and interface contract (for test authors)
 

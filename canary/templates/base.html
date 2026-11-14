@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Canary{% endblock %} · Canary demo</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='canary.css') }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='brand/favicon-32.png') }}">
+  <link rel="icon" href="{{ url_for('static', filename='brand/favicon.ico') }}" sizes="any">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='brand/apple-touch-icon.png') }}">
+  <meta name="theme-color" content="#0a1a36">
 </head>
 <body>
   <div class="demo-banner" role="note">
@@ -13,7 +17,7 @@
     evidence of exposure.
   </div>
   <header class="topbar">
-    <a class="brand" href="{{ url_for('main.dashboard') }}"><span class="brand-mark" aria-hidden="true"></span>Canary</a>
+    <a class="brand" href="{{ url_for('main.dashboard') }}"><img src="{{ url_for('static', filename='brand/canary-mark-64.png') }}" width="36" height="36" alt="">Canary</a>
     {% if g.org %}
     <nav class="nav">
       {% set ep = request.endpoint %}
@@ -42,7 +46,7 @@
     {% block content %}{% endblock %}
   </main>
   <footer class="footer">
-    <span>Canary local demo prototype · Demo authentication only · Data stays in a local SQLite file until reset.
+    <span><img src="{{ url_for('static', filename='brand/canary-mark-64.png') }}" width="20" height="20" alt="">Canary local demo prototype · Demo authentication only · Data stays in a local SQLite file until reset.
     {% if g.user %}<a href="{{ url_for('main.privacy') }}">Privacy and data flows</a>{% endif %}</span>
     {% if g.role == 'admin' %}
     <form method="post" action="{{ url_for('main.demo_reset') }}"

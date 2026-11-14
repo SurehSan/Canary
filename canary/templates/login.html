@@ -1,8 +1,15 @@
 {% extends "base.html" %}
 {% block title %}Sign in{% endblock %}
 {% block content %}
+<div class="hero">
+  <img src="{{ url_for('static', filename='brand/canary-logo-256.png') }}"
+       srcset="{{ url_for('static', filename='brand/canary-logo-256.png') }} 1x, {{ url_for('static', filename='brand/canary-logo-512.png') }} 2x"
+       width="168" height="168" alt="Canary logo: a yellow canary with circuit nodes, sending out signal waves">
+  <h1>Canary</h1>
+  <p>AI threat alerts, matched to your stack, with a plan to respond.</p>
+</div>
 <section class="card narrow">
-  <h1>Sign in</h1>
+  <h2>Sign in</h2>
   <p class="muted">Demo authentication only (no SSO, MFA, or recovery). All demo accounts use the local password
     <code>demo</code>.</p>
   {% if error %}<div class="flash error">{{ error }}</div>{% endif %}
