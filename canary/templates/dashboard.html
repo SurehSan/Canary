@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="row-between">
+  <h1>{{ g.org.name }} <span class="tag">Demo data</span></h1>
+  {% if g.role == 'admin' %}
+  <form method="post" action="{{ url_for('main.refresh_sources') }}"><button class="btn primary">Refresh sources now</button></form>
+  {% endif %}
+</div>
+
+<section class="stats">
+  <a class="stat" href="{{ url_for('main.alerts', status='new') }}"><span class="num" data-count="new-alerts">{{ counts['new-alerts'] }}</span><span>New alerts</span></a>
+  <a class="stat" href="{{ url_for('main.alerts') }}"><span class="num" data-count="requires-action">{{ counts['requires-action'] }}</span><span>Require action</span></a>
+  <a class="stat" href="{{ url_for('main.alerts', priority='P2') }}"><span class="num" data-count="high-priority">{{ counts['high-priority'] }}</span><span>Open P1/P2</span></a>
+  <a class="stat" href="{{ url_for('main.alerts') }}"><span class="num" data-count="open-alerts">{{ counts['open-alerts'] }}</span><span>Open alerts</span></a>
+</section>
+<p class="muted small">Counts are computed from saved alert records for this organization. “Require action” = a new unread alert, or an assigned alert under investigation or in mitigation.</p>
+
+<div class="grid-2">
+  <section class="card">
+    <h2>Alerts</h2>
+    {% for a in alerts %}
+      <a class="alert-row" href="{{ url_for('main.alert_detail', alert_id=a.id) }}">
+        <span class="prio {{ a.priority }}">{{ a.priority }}</span>
+        <span class="grow">{% if a.unread %}<span class="dot" title="Unread"></span>{% endif %}{{ a.title }}
+          {% if a.has_update %}<span class="tag update">Updated evidence</span>{% endif %}<br>
+          <span class="muted small">{{ MATCH_LABELS[a.match_state] }} · {{ a.score }}/100 · {{ ALERT_STATUSES[a.status] }}{% if a.assignee %} · {{ a.assignee }}{% endif %}</span></span>
+      </a>
+    {% else %}
+      <p class="muted">No alerts yet.{% if g.role == 'admin' %} Use “Refresh sources now” to collect from enabled sources.{% else %} An Administrator can refresh sources.{% endif %}</p>
+    {% endfor %}
+  </section>
+
+  <section class="card">
+    <h2>Monitoring status</h2>
+    <table class="tbl">
+      <thead><tr><th>Source</th><th>Status</th><th>Last successful check</th></tr></thead>
+      <tbody>
+      {% for h in health if h.source.enabled %}
+        <tr><td>{{ h.source.name }}</td>
+          <td><span class="state {{ h.state|lower|replace(' ', '-') }}">{{ h.state }}</span>
+            {% if h.state == 'Failed' %}<div class="small err">{{ h.last.error }}</div>{% endif %}</td>
+          <td class="small">{{ h.last_ok or '—' }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <p class="muted small">Collection: manual refresh + local hourly schedule (demo cadence, not real time). Notification cadence is separate: P1 immediate, P2 next processing cycle, P3/P4 daily digest.</p>
+  </section>
+</div>
+
+<section class="card">
+  <h2>Recent activity</h2>
+  <ul class="events">
+    {% for e in events %}<li><span class="muted small">{{ e.created_at }}</span> <strong>{{ e.actor_label }}</strong> — {{ e.summary }}</li>
+    {% else %}<li class="muted">No activity yet.</li>{% endfor %}
+  </ul>
+  <a href="{{ url_for('main.audit_log') }}">Full audit history →</a>
+</section>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Sources{% endblock %}
+{% block content %}
+<div class="row-between">
+  <h1>Monitoring sources</h1>
+  {% if g.role == 'admin' %}
+  <form method="post" action="{{ url_for('main.refresh_sources') }}"><button class="btn primary">Refresh sources now</button></form>
+  {% endif %}
+</div>
+<p class="muted">Fixed starter catalog of approved public sources. Arbitrary URLs, authenticated, or paywalled sources
+  cannot be added. Adapter in this build: <strong>{{ FIXTURE_ADAPTER }}</strong> — records are real articles stored
+  offline so the demo works without network access.</p>
+<dl class="kv">
+  <dt>Collection cadence</dt><dd>Manual refresh + local hourly schedule (demo cadence; no real-time guarantee)</dd>
+  <dt>Notification cadence</dt><dd>Separate: P1 immediate, P2 next local processing cycle, P3/P4 daily digest</dd>
+</dl>
+
+<section class="card">
+  <div class="table-wrap"><table class="tbl">
+    <thead><tr><th>Source</th><th>Method</th><th>Status</th><th>Last check</th><th>Last success</th>{% if g.role == 'admin' %}<th>Settings</th>{% endif %}</tr></thead>
+    <tbody>
+    {% for h in health %}
+      <tr>
+        <td><strong>{{ h.source.name }}</strong><br><span class="muted small">{{ h.source.topics }} · tier {{ h.source.tier }}</span></td>
+        <td class="small">{{ h.source.method }}</td>
+        <td><span class="state {{ h.state|lower|replace(' ', '-') }}">{{ h.state }}</span>
+          {% if h.source.simulate_failure %}<div class="tag sim">Simulated outage on</div>{% endif %}
+          {% if h.state == 'Failed' %}<div class="small err">{{ h.last.error }} ({{ h.last.attempts }} attempts)</div>{% endif %}</td>
+        <td class="small">{{ h.last.finished_at if h.last else '—' }}</td>
+        <td class="small">{{ h.last_ok or '—' }}</td>
+        {% if g.role == 'admin' %}
+        <td class="actions">
+          <form method="post" action="{{ url_for('main.toggle_source', source_id=h.source.id) }}">
+            <button class="btn small">{{ 'Disable' if h.source.enabled else 'Enable' }}</button></form>
+          <form method="post" action="{{ url_for('main.simulate_failure', source_id=h.source.id) }}">
+            <button class="btn small ghost">{{ 'End simulated outage' if h.source.simulate_failure else 'Simulate outage' }}</button></form>
+        </td>{% endif %}
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+
+<section class="card">
+  <h2>Recent collection runs</h2>
+  <table class="tbl">
+    <thead><tr><th>Source</th><th>Trigger</th><th>Outcome</th><th>Attempts</th><th>New items</th><th>Finished</th></tr></thead>
+    <tbody>
+    {% for r in runs %}
+      <tr><td>{{ r.name }}</td><td>{{ r.trigger }}</td>
+        <td><span class="state {{ 'failed' if r.outcome == 'failed' else 'healthy' }}">{{ {'success': 'Success', 'success_no_new': 'Success — no new records', 'failed': 'Failed'}[r.outcome] }}</span>
+          {% if r.error %}<div class="small err">{{ r.error }}</div>{% endif %}</td>
+        <td>{{ r.attempts }}</td><td>{{ r.new_items }}</td><td class="small">{{ r.finished_at }}</td></tr>
+    {% else %}<tr><td colspan="6" class="muted">No collection runs yet.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

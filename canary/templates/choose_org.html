@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Choose organization{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>Choose an organization</h1>
+  <p class="muted">Every page and action is scoped to the organization you select.</p>
+  {% for o in orgs %}
+  <form method="post" action="{{ url_for('main.select_org') }}" class="row-between org-pick">
+    <input type="hidden" name="org_id" value="{{ o.id }}">
+    <div><strong>{{ o.name }}</strong> <span class="tag">Demo data</span><br>
+      <span class="muted">{{ o.industry }} · {{ ROLE_LABELS[o.role] }}</span></div>
+    <button class="btn">Open</button>
+  </form>
+  {% else %}
+  <p>You do not have access to any organization.</p>
+  {% endfor %}
+</section>
+{% endblock %}

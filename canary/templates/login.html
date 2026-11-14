@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>Sign in</h1>
+  <p class="muted">Demo authentication only (no SSO, MFA, or recovery). All demo accounts use the local password
+    <code>demo</code>.</p>
+  {% if error %}<div class="flash error">{{ error }}</div>{% endif %}
+  <form method="post" class="stack">
+    <label>Username <input name="username" autocomplete="username" required></label>
+    <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
+    <button class="btn primary">Sign in</button>
+  </form>
+  <h2 class="sub">Demo accounts (fictional)</h2>
+  <ul class="plain">
+    {% for a in accounts %}<li><code>{{ a.username }}</code> — {{ a.display_name }}, {{ a.title }}</li>{% endfor %}
+  </ul>
+</section>
+{% endblock %}

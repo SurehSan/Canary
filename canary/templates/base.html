@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Canary{% endblock %} · Canary demo</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='canary.css') }}">
+</head>
+<body>
+  <div class="demo-banner" role="note">
+    <strong>Demo data</strong> · Local prototype with fictional organizations and people. Real public sources are
+    linked as cited. Not production-hardened; no HIPAA or other compliance claim. Priority is triage guidance, not
+    evidence of exposure.
+  </div>
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('main.dashboard') }}"><span class="brand-mark" aria-hidden="true"></span>Canary</a>
+    {% if g.org %}
+    <nav class="nav">
+      {% set ep = request.endpoint %}
+      <a href="{{ url_for('main.dashboard') }}" class="{{ 'active' if ep == 'main.dashboard' }}">Dashboard</a>
+      <a href="{{ url_for('main.alerts') }}" class="{{ 'active' if ep in ('main.alerts', 'main.alert_detail') }}">Alerts</a>
+      <a href="{{ url_for('main.sources') }}" class="{{ 'active' if ep == 'main.sources' }}">Sources</a>
+      <a href="{{ url_for('main.organization') }}" class="{{ 'active' if ep == 'main.organization' }}">Organization</a>
+      <a href="{{ url_for('main.audit_log') }}" class="{{ 'active' if ep == 'main.audit_log' }}">Audit</a>
+    </nav>
+    {% endif %}
+    {% if g.user %}
+    <div class="who">
+      {% if g.org %}<a class="org-chip" href="{{ url_for('main.choose_org') }}" title="Switch organization">{{ g.org.name }}</a>{% endif %}
+      <span>{{ g.user.display_name }}{% if g.role %} · <em>{{ ROLE_LABELS[g.role] }}</em>{% endif %}</span>
+      <form method="post" action="{{ url_for('main.logout') }}"><button class="link">Sign out</button></form>
+    </div>
+    {% endif %}
+  </header>
+  <main class="page">
+    {% with messages = get_flashed_messages() %}
+      {% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="footer">
+    Canary local demo prototype · Demo authentication only · Data stays in a local SQLite file until reset.
+    {% if g.role == 'admin' %}
+    <form method="post" action="{{ url_for('main.demo_reset') }}"
+          onsubmit="return confirm('Reset the demo? This deletes ALL seeded and entered records and restores the seed state.');">
+      <button class="btn danger small">Reset demo data</button>
+    </form>
+    {% endif %}
+  </footer>
+</body>
+</html>
