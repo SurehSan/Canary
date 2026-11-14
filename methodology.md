@@ -9,13 +9,13 @@ every task, instead of coming together at the last minute.
 ## 1. Build one thin end-to-end path first
 
 - Before polishing anything, get the
-  [Fernwood demo flow](demo/hallusquatting-demo-flow.md) running from
+  [Fernwood demo flow](documents/hallusquatting-demo-flow.md) running from
   start to finish with stubs:
   - a hardcoded organization
   - one RSS source
   - a fake LLM response
   - an alert screen
-  - an email to the mock inbox
+  - a real test email sent only to an allowlisted, team-owned address
 - After that, every task replaces a stub with the real implementation.
 - Why: the demo works from early on and only gets better, so a late
   crunch doesn't leave us with half-built layers.
@@ -26,7 +26,7 @@ every task, instead of coming together at the last minute.
 - Each cycle ends with a demo-able build and a quick check of what's
   blocking people.
 - The requirement docs (`CAN-REQ-xxx`) are the backlog. Work through
-  them in the order set by the [design overview](design/README.md):
+  them in the order set by the [design overview](design/design.md):
   1. Data model
   2. AI analysis
   3. Collection pipeline
@@ -57,7 +57,8 @@ every task, instead of coming together at the last minute.
   - the priority formula
   - deduplication
   - alert and plan status transitions
-  - the switch that sends email only to mock inboxes
+  - the allowlist check that sends real test email only to team-owned
+    addresses and rejects every other recipient before sending
 - **For the LLM**, save fixed sample inputs and the output format we
   expect, so prompt changes can't silently break the analysis.
 - **Write one end-to-end test** that runs the whole Fernwood flow.
@@ -82,9 +83,20 @@ A task is done when:
 
 ------------------------------------------------------------------------
 
-## Open items
+## Notification policy
 
-- **Team size and timeline:** fill these in, then turn this into a
-  concrete schedule.
-- **Owners:** assign one person to each design area (DES-001 to
-  DES-008).
+Prototype notifications are **real test emails** sent through a locally
+configured SMTP provider, and only to an explicit allowlist of team-owned
+addresses. Every subject starts with `[CANARY DEMO - TEST]` and every body
+carries a test-mode notice. Non-allowlisted recipients are rejected before any
+send. If SMTP is not configured or a send fails, the app shows a blocked or
+failed state; there is no mock inbox fallback. Automated tests use a local SMTP
+capture server and never send to arbitrary addresses.
+
+## Owners and timeline
+
+- **Timeline:** one day (8 hours), following
+  [the implementation plan](documents/implementation-plan.md).
+- **Claude:** implementation (stack, schema, app, seed/reset, all DES areas).
+- **Codex:** test matrix, test implementation, verification, and reporting.
+  Codex does not edit application files unless Claude hands off a fix.
