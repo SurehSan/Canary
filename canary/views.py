@@ -10,6 +10,7 @@ from .db import audit, get_db, now_iso
 from .delivery import (SIMULATE_KEY, dispatch, enqueue_for_alert, get_setting, process_digest, process_queue,
                        send_test, set_setting, smtp_status)
 from .fixtures import FOLLOWUP_ITEMS
+from .live import LIVE_FEEDS
 from .notify import SUBJECT_PREFIX, check_recipient
 from .pipeline import process_findings
 from .scoring import MATCH_LABELS, PRIORITY_LABELS
@@ -105,10 +106,10 @@ def source_health(db, org_id, now):
         " WHERE os.org_id=? ORDER BY c.id", (org_id,)).fetchall()
     out = []
     for s in rows:
-        last = db.execute("SELECT * FROM collection_runs WHERE source_id=? ORDER BY id DESC LIMIT 1",
-                          (s["id"],)).fetchone()
-        last_ok = db.execute("SELECT finished_at FROM collection_runs WHERE source_id=? AND outcome!='failed'"
-                             " ORDER BY id DESC LIMIT 1", (s["id"],)).fetchone()
+        last = db.execute("SELECT * FROM collection_runs WHERE source_id=? AND outcome!='skipped'"
+                          " ORDER BY id DESC LIMIT 1", (s["id"],)).fetchone()
+        last_ok = db.execute("SELECT finished_at FROM collection_runs WHERE source_id=? AND outcome IN"
+                             " ('success','success_no_new') ORDER BY id DESC LIMIT 1", (s["id"],)).fetchone()
         if not s["enabled"]:
             state = "Disabled"
         elif last is None:
@@ -196,7 +197,13 @@ def sources():
     runs = db.execute("SELECT r.*, c.name FROM collection_runs r JOIN source_catalog c ON c.id=r.source_id"
                       " JOIN org_sources os ON os.source_id=c.id AND os.org_id=?"
                       " ORDER BY r.id DESC LIMIT 12", (g.org["id"],)).fetchall()
-    return render_template("sources.html", health=health, runs=runs)
+    items = db.execute("SELECT si.*, r.adapter FROM source_items si LEFT JOIN collection_runs r ON r.id=si.collection_run_id"
+                       " WHERE si.source_id IS NULL OR si.source_id IN"
+                       " (SELECT source_id FROM org_sources WHERE org_id=? AND enabled=1)"
+                       " ORDER BY si.id DESC LIMIT 15", (g.org["id"],)).fetchall()
+    return render_template("sources.html", health=health, runs=runs, items=items,
+                           live_on=current_app.config.get("LIVE_SOURCES"), live_feeds=LIVE_FEEDS,
+                           followup_done=db.execute("SELECT 1 FROM source_items WHERE source_id IS NULL").fetchone())
 
 
 @bp.post("/sources/<int:source_id>/toggle")

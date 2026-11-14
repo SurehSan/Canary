@@ -7,9 +7,12 @@ whose settings enable a contributing source (pipeline.py).
 """
 import json
 import time
+import xml.etree.ElementTree as ET
+from datetime import datetime
 
 from flask import current_app
 
+from . import live
 from .analysis import CURATED
 from .db import audit, now_iso
 from .fixtures import SOURCE_ITEMS
@@ -29,41 +32,69 @@ def fetch_fixture(source):
     return [i for i in SOURCE_ITEMS if i["source_key"] == source["key"]]
 
 
+def fetch_live(source):
+    getter = current_app.config.get("HTTP_GET") or live.http_get
+    if source["simulate_failure"]:
+        raise SourceError("Simulated outage (demo): HTTP 503 from source")
+    items = live.parse_rss(getter(live.LIVE_FEEDS[source["key"]]))
+    return [dict(i, source_key=source["key"]) for i in items if live.is_ai_relevant(i["title"], i["excerpt"])]
+
+
 def run_collection(conn, trigger="manual", actor_label="System scheduler"):
     """Collect every source enabled by at least one organization. Returns touched finding ids."""
     sources = conn.execute(
         "SELECT * FROM source_catalog WHERE id IN (SELECT source_id FROM org_sources WHERE enabled = 1) ORDER BY id"
     ).fetchall()
     touched = set()
-    sleep = current_app.config.get("RETRY_SLEEP_SECONDS", 0.2)
     for src in sources:
-        run_id = conn.execute(
-            "INSERT INTO collection_runs (source_id, trigger, adapter, started_at) VALUES (?,?,?,?)",
-            (src["id"], trigger, FIXTURE_ADAPTER, now_iso())).lastrowid
-        attempts, items, error = 0, None, None
-        while attempts < MAX_ATTEMPTS and items is None:
-            attempts += 1
-            try:
-                items = fetch_fixture(src)
-            except SourceError as exc:
-                error = str(exc)
-                if attempts < MAX_ATTEMPTS and sleep:
-                    time.sleep(sleep * attempts)  # bounded backoff
-        if items is None:
-            conn.execute("UPDATE collection_runs SET finished_at=?, outcome='failed', attempts=?, error=? WHERE id=?",
-                         (now_iso(), attempts, error, run_id))
-            audit(conn, org_id=None, actor_id=None, actor_label=actor_label, action="collection.failed",
-                  target_type="source", target_id=src["id"],
-                  summary=f"{src['name']}: failed after {attempts} attempts")
-            continue
-        new = 0
-        for raw in items:
-            finding_id = ingest_item(conn, raw, src, run_id)
-            if finding_id:
-                new += 1
-                touched.add(finding_id)
-        conn.execute("UPDATE collection_runs SET finished_at=?, outcome=?, attempts=?, new_items=? WHERE id=?",
-                     (now_iso(), "success" if new else "success_no_new", attempts, new, run_id))
+        touched |= _run_adapter(conn, src, trigger, FIXTURE_ADAPTER, fetch_fixture, actor_label)
+        if current_app.config.get("LIVE_SOURCES") and src["key"] in live.LIVE_FEEDS:
+            touched |= _run_adapter(conn, src, trigger, live.LIVE_ADAPTER, fetch_live, actor_label)
+    return touched
+
+
+def _live_too_soon(conn, src):
+    last = conn.execute("SELECT started_at FROM collection_runs WHERE source_id=? AND adapter=? AND outcome!='skipped'"
+                        " ORDER BY id DESC LIMIT 1", (src["id"], live.LIVE_ADAPTER)).fetchone()
+    if last is None:
+        return False
+    elapsed = (datetime.fromisoformat(now_iso()) - datetime.fromisoformat(last["started_at"])).total_seconds()
+    return elapsed < current_app.config.get("LIVE_MIN_INTERVAL_SECONDS", 900)
+
+
+def _run_adapter(conn, src, trigger, adapter, fetch, actor_label):
+    run_id = conn.execute("INSERT INTO collection_runs (source_id, trigger, adapter, started_at) VALUES (?,?,?,?)",
+                          (src["id"], trigger, adapter, now_iso())).lastrowid
+    if adapter == live.LIVE_ADAPTER and _live_too_soon(conn, src):
+        conn.execute("UPDATE collection_runs SET finished_at=?, outcome='skipped', error=? WHERE id=?",
+                     (now_iso(), "Skipped: minimum interval between live fetches not reached (rate-limit respect)",
+                      run_id))
+        return set()
+    sleep = current_app.config.get("RETRY_SLEEP_SECONDS", 0.2)
+    attempts, items, error = 0, None, None
+    while attempts < MAX_ATTEMPTS and items is None:
+        attempts += 1
+        try:
+            items = fetch(src)
+        except (SourceError, OSError, ET.ParseError) as exc:
+            error = f"{type(exc).__name__}: {str(exc)[:200]}" if not isinstance(exc, SourceError) else str(exc)
+            if attempts < MAX_ATTEMPTS and sleep:
+                time.sleep(sleep * attempts)  # bounded backoff
+    if items is None:
+        conn.execute("UPDATE collection_runs SET finished_at=?, outcome='failed', attempts=?, error=? WHERE id=?",
+                     (now_iso(), attempts, error, run_id))
+        audit(conn, org_id=None, actor_id=None, actor_label=actor_label, action="collection.failed",
+              target_type="source", target_id=src["id"],
+              summary=f"{src['name']} ({adapter}): failed after {attempts} attempts")
+        return set()
+    touched = set()
+    for raw in items:
+        finding_id = ingest_item(conn, raw, src, run_id)
+        if finding_id:
+            touched.add(finding_id)
+    new = conn.execute("SELECT COUNT(*) FROM source_items WHERE collection_run_id=?", (run_id,)).fetchone()[0]
+    conn.execute("UPDATE collection_runs SET finished_at=?, outcome=?, attempts=?, new_items=? WHERE id=?",
+                 (now_iso(), "success" if new else "success_no_new", attempts, new, run_id))
     return touched
 
 

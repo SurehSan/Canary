@@ -118,7 +118,8 @@ def _send_smtp(to_addr, subject, body):
 def _precheck(conn, org_id, email):
     reason = check_recipient(email, current_app.config.get("EMAIL_ALLOWLIST") or set())
     if reason:
-        return "rejected", reason, 0
+        # A missing address is a configuration gap (blocked); any other address off the allowlist is rejected.
+        return ("blocked" if not (email or "").strip() else "rejected"), reason, 0
     ok, why = smtp_status()
     if not ok:
         return "blocked", why, 0

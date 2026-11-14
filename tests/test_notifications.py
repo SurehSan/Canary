@@ -98,6 +98,15 @@ def test_non_allowlisted_recipient_is_rejected_before_any_smtp_connection(nclien
     assert smtp.connections == 0 and smtp.messages == []
 
 
+def test_member_without_test_address_is_blocked_not_rejected(nclient, ndb, smtp):
+    fern = org_id(ndb, "Fernwood Labs")
+    login(nclient, "wyatt", org=fern)
+    refresh(nclient)
+    nclient.post("/notifications/process")
+    (n,) = rows(ndb)
+    assert n["status"] == "blocked" and "No test address" in n["error"] and smtp.connections == 0
+
+
 def test_missing_smtp_configuration_blocks_and_never_claims_sent(tmp_path, smtp):
     app = make_app(tmp_path, smtp, SMTP_HOST=None)
     client = app.test_client()
