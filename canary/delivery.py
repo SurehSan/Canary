@@ -11,6 +11,7 @@ from email.message import EmailMessage
 
 from flask import current_app
 
+from .analysis import apply_corrections, corrections_for
 from .db import audit, now_iso
 from .notify import SUBJECT_PREFIX, TEST_NOTICE, build_digest, build_message, cadence_for, check_recipient, fingerprint
 
@@ -43,7 +44,9 @@ def alert_context(conn, alert_id):
     org = conn.execute("SELECT name FROM organizations WHERE id=?", (a["org_id"],)).fetchone()
     an_row = conn.execute("SELECT payload FROM analyses WHERE org_id=? AND finding_id=? ORDER BY id DESC LIMIT 1",
                           (a["org_id"], f["id"])).fetchone()
-    analysis = json.loads(an_row["payload"]) if an_row else {}
+    analysis = {}
+    if an_row:  # human corrections (CAN-REQ-006) also apply to email content
+        analysis = apply_corrections(json.loads(an_row["payload"]), corrections_for(conn, a["org_id"], f["id"]))
     items = conn.execute("SELECT * FROM source_items WHERE finding_id=? ORDER BY id", (f["id"],)).fetchall()
     n_of = {i["id"]: n for n, i in enumerate(items, start=1)}
     priority = r["override_priority"] or r["priority"]

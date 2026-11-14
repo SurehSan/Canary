@@ -40,7 +40,7 @@ def create_app(config=None):
         app.config.update(config)
     Path(app.config["DATABASE"]).parent.mkdir(parents=True, exist_ok=True)
 
-    from . import db, views, work_views  # noqa: F401  (work_views registers routes on views.bp)
+    from . import admin_views, db, views, work_views  # noqa: F401  (route modules register on views.bp)
     from .auth import load_user
     app.teardown_appcontext(db.close_db)
     app.before_request(load_user)

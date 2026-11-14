@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from flask import Blueprint, abort, current_app, flash, g, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash
 
+from .analysis import apply_corrections, corrections_for
 from .auth import ROLE_LABELS, actor_label, login_required, org_required, role_required
 from .collector import FIXTURE_ADAPTER, bump_revision, ingest_item, run_collection, snapshot_revision
 from .db import audit, get_db, now_iso
@@ -302,7 +303,8 @@ def alert_detail(alert_id):
     rel = db.execute("SELECT * FROM relevance WHERE org_id=? AND finding_id=?", (g.org["id"], finding["id"])).fetchone()
     analysis_row = db.execute("SELECT * FROM analyses WHERE org_id=? AND finding_id=? ORDER BY id DESC LIMIT 1",
                               (g.org["id"], finding["id"])).fetchone()
-    analysis = json.loads(analysis_row["payload"]) if analysis_row else None
+    corrections = corrections_for(db, g.org["id"], finding["id"])
+    analysis = apply_corrections(json.loads(analysis_row["payload"]), corrections) if analysis_row else None
     members = db.execute("SELECT u.id, u.display_name, m.role FROM memberships m JOIN users u ON u.id=m.user_id"
                          " WHERE m.org_id=? AND m.status='active' ORDER BY u.id", (g.org["id"],)).fetchall()
     revisions = db.execute("SELECT * FROM finding_revisions WHERE finding_id=? ORDER BY version DESC",
@@ -318,7 +320,7 @@ def alert_detail(alert_id):
     plan = db.execute("SELECT id, title FROM plans WHERE alert_id=? AND org_id=? ORDER BY id DESC LIMIT 1",
                       (alert_id, g.org["id"])).fetchone()
     return render_template("alert.html", alert=alert, finding=finding, items=items, rel=rel, analysis=analysis,
-                           notes=notes, overrider=overrider, guide=guide, plan=plan,
+                           notes=notes, overrider=overrider, guide=guide, plan=plan, corrections=corrections,
                            analysis_row=analysis_row, members=members, revisions=revisions, history=history,
                            cite=cite, next_states=ALERT_TRANSITIONS.get(alert["status"], []),
                            note_required=NOTE_REQUIRED)

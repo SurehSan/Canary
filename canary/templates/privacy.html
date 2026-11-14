@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Privacy and data flows{% endblock %}
+{% block content %}
+<h1>Privacy, data flows, and boundaries</h1>
+<div class="notice">Canary here is a <strong>local demo prototype</strong>. It runs on one machine, uses fictional
+  organizations and people, and is not production-hardened. It makes no HIPAA or other regulatory compliance
+  claim. Do not enter real patient, customer, credential, or other regulated data.</div>
+
+<section class="card">
+  <h2>Data flows</h2>
+  <div class="table-wrap"><table class="tbl">
+    <thead><tr><th>Flow</th><th>What leaves this machine</th><th>Status in this run</th></tr></thead>
+    <tbody>
+      <tr><td>Test email (SMTP)</td>
+        <td>Alert title, priority, relevance, short summary, organization context lines, unknowns, and source links, sent only to allowlisted team-owned addresses with a test label.</td>
+        <td>{% if smtp_ok %}{{ smtp_msg }}; {{ allowlist_size }} allowlisted address(es){% else %}SMTP not configured: nothing is sent and sends show as Blocked{% endif %}</td></tr>
+      <tr><td>Source collection</td>
+        <td>Nothing about any organization. Only an anonymous GET of a public feed (The Hacker News RSS) when live mode is on.</td>
+        <td>{% if live_on %}Live RSS is on (at most one fetch per 15 minutes){% else %}Live RSS is off: offline fixture records only, no network calls{% endif %}</td></tr>
+      <tr><td>AI model provider</td>
+        <td>Nothing.</td>
+        <td>No model provider is connected in this build. Analysis and guides are deterministic demo templates.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="card">
+  <h2>What is stored, and retention</h2>
+  <ul>
+    <li>Everything is stored in one local SQLite file: accounts, organizations, inventory, questionnaire answers, collected source metadata and short excerpts (not full articles), analyses and corrections, alerts, guides, plans, notifications, and audit history.</li>
+    <li>Retention: records are kept until you reset the demo. <strong>Reset</strong> deletes every seeded and entered record and restores the seed state. There is no backup or recovery guarantee.</li>
+    <li>Secrets (SMTP password, any future API key) come only from local environment variables. They are never stored in the database, shown on a page, or written to the audit log. SMTP errors are recorded only as an error type and code.</li>
+    <li>Every page and action is scoped to the selected organization. Records from another organization return "not found". Shared, publicly sourced findings are the exception, and pages that change them say so.</li>
+  </ul>
+</section>
+
+<section class="card">
+  <h2>How to read Canary's output</h2>
+  <ul>
+    <li>A priority or relevance score is a triage recommendation, not proof of exposure or compromise. Only a person can mark exposure as confirmed, with an evidence note.</li>
+    <li>Guides and plans are AI-generated drafts. A plan takes effect only after human approval by an Administrator, and approval does not execute anything on your systems.</li>
+    <li>Simulated items (source outages, delivery failures, the follow-up report step) are labeled as simulations.</li>
+  </ul>
+</section>
+
+<section class="card">
+  <h2>Before any real or hosted use</h2>
+  <p class="small">Encryption and key management, backups, incident response, deletion guarantees, provider contracts and retention terms, regulatory scope, CSRF protection and hardened session cookies, and a review of every source's terms are production prerequisites. They are not implemented here.</p>
+</section>
+{% endblock %}

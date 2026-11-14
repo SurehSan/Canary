@@ -6,6 +6,7 @@
 PRAGMA foreign_keys = ON;
 
 DROP TABLE IF EXISTS audit_events;
+DROP TABLE IF EXISTS analysis_corrections;
 DROP TABLE IF EXISTS plan_versions;
 DROP TABLE IF EXISTS plan_actions;
 DROP TABLE IF EXISTS plans;
@@ -369,5 +370,18 @@ CREATE TABLE plan_versions (
     actor_id INTEGER REFERENCES users(id),
     actor_label TEXT NOT NULL,
     note TEXT,
+    created_at TEXT NOT NULL
+);
+
+-- CAN-REQ-006 human corrections to generated analysis (provenance kept; generated text is never overwritten)
+CREATE TABLE analysis_corrections (
+    id INTEGER PRIMARY KEY,
+    org_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    finding_id INTEGER NOT NULL REFERENCES findings(id) ON DELETE CASCADE,
+    section TEXT NOT NULL,
+    prior_value TEXT NOT NULL,
+    new_value TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    editor_id INTEGER REFERENCES users(id),
     created_at TEXT NOT NULL
 );

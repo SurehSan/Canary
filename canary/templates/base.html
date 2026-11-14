@@ -42,7 +42,8 @@
     {% block content %}{% endblock %}
   </main>
   <footer class="footer">
-    Canary local demo prototype · Demo authentication only · Data stays in a local SQLite file until reset.
+    <span>Canary local demo prototype · Demo authentication only · Data stays in a local SQLite file until reset.
+    {% if g.user %}<a href="{{ url_for('main.privacy') }}">Privacy and data flows</a>{% endif %}</span>
     {% if g.role == 'admin' %}
     <form method="post" action="{{ url_for('main.demo_reset') }}"
           onsubmit="return confirm('Reset the demo? This deletes ALL seeded and entered records and restores the seed state.');">

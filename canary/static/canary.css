@@ -94,3 +94,8 @@ button.link { background: none; border: 0; color: var(--link); cursor: pointer; 
 .question { border-color: var(--accent); }
 fieldset.q { border: 1px solid var(--line); border-radius: 8px; padding: .5rem .8rem; }
 details summary { cursor: pointer; margin: .4rem 0; }
+.tag.fixed { background: #dff3e7; color: #14532d; }
+details.fix { display: inline-block; margin-left: .3rem; } details.fix summary { color: var(--link); font-size: .78rem; }
+details.fix[open] { display: block; background: var(--bg); padding: .4rem .6rem; border-radius: 6px; }
+.inv-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: .5rem; align-items: end; }
+.inv-form label { display: flex; flex-direction: column; font-size: .8rem; color: var(--muted); gap: .15rem; }

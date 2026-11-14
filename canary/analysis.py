@@ -107,6 +107,42 @@ def build_demo_analysis(finding, source_items, match):
     return analysis
 
 
+CORRECTABLE_SECTIONS = {"what_happened": "What happened", "source_supported": "Source-supported",
+                        "org_context": "Organization context", "unknowns": "Unknown",
+                        "interpretation": "Canary interpretation"}
+
+
+def section_texts(analysis, section):
+    return [c["text"] if isinstance(c, dict) else c for c in analysis.get(section, [])]
+
+
+def apply_corrections(analysis, corrections):
+    """Overlay human corrections (oldest first) on a generated analysis without mutating it.
+
+    A correction applies where the current text equals its prior value, so a correction made against an
+    earlier analysis version stops applying once that text no longer appears (it stays in history).
+    Returns a copy with a "corrected" map {(section, new_text): correction}.
+    """
+    out = {k: (list(v) if isinstance(v, list) else v) for k, v in analysis.items()}
+    out["corrected"] = {}
+    for corr in corrections:
+        section = corr["section"]
+        entries = out.get(section, [])
+        for i, entry in enumerate(entries):
+            text = entry["text"] if isinstance(entry, dict) else entry
+            if text == corr["prior_value"]:
+                entries[i] = dict(entry, text=corr["new_value"]) if isinstance(entry, dict) else corr["new_value"]
+                out["corrected"][(section, corr["new_value"])] = corr
+        out[section] = entries
+    return out
+
+
+def corrections_for(db, org_id, finding_id):
+    return [dict(r) for r in db.execute(
+        "SELECT c.*, u.display_name AS editor FROM analysis_corrections c LEFT JOIN users u ON u.id=c.editor_id"
+        " WHERE c.org_id=? AND c.finding_id=? ORDER BY c.id", (org_id, finding_id))]
+
+
 def validate_analysis(analysis, source_ids):
     for section in REQUIRED_SECTIONS:
         if section not in analysis:

@@ -90,23 +90,37 @@
   </section>
 </div>
 
+{% macro fix(section, text) -%}
+  {%- set corr = analysis.corrected.get((section, text)) -%}
+  {%- if corr %} <span class="tag fixed" title="Generated text: {{ corr.prior_value }}">Corrected by {{ corr.editor }}, {{ corr.created_at[:10] }}: {{ corr.reason }}</span>{% endif -%}
+  {%- if g.role in ('admin', 'lead') %}
+  <details class="fix"><summary class="small">Correct</summary>
+    <form method="post" action="{{ url_for('main.correct_analysis', alert_id=alert.id) }}" class="stack">
+      <input type="hidden" name="section" value="{{ section }}"><input type="hidden" name="original" value="{{ text }}">
+      <label>Corrected text <textarea name="corrected" rows="2" required>{{ text }}</textarea></label>
+      <label>Reason <input name="reason" required></label>
+      <button class="btn small">Save correction</button>
+    </form>
+  </details>
+  {%- endif %}
+{%- endmacro %}
 {% if analysis %}
-<section class="card">
+<section class="card" id="analysis">
   <div class="row-between"><h2>Analysis</h2><span class="tag ai">{{ analysis.label }}</span></div>
   <h3>What happened</h3>
-  {% for w in analysis.what_happened %}<p>{{ w }}</p>{% endfor %}
+  {% for w in analysis.what_happened %}<p>{{ w }}{{ fix('what_happened', w) }}</p>{% endfor %}
   <div class="grid-2">
     <div class="facts">
       <h3>Source-supported</h3>
-      <ul>{% for c in analysis.source_supported %}<li>{{ c.text }} {% for i in c.citations %}<a class="cite" href="#src-{{ i }}">[{{ cite[i] }}]</a>{% endfor %}</li>{% endfor %}</ul>
+      <ul>{% for c in analysis.source_supported %}<li>{{ c.text }} {% for i in c.citations %}<a class="cite" href="#src-{{ i }}">[{{ cite[i] }}]</a>{% endfor %}{{ fix('source_supported', c.text) }}</li>{% endfor %}</ul>
       <h3>Organization context</h3>
-      <ul>{% for c in analysis.org_context %}<li>{{ c }}</li>{% endfor %}</ul>
+      <ul>{% for c in analysis.org_context %}<li>{{ c }}{{ fix('org_context', c) }}</li>{% endfor %}</ul>
     </div>
     <div>
       <h3>Unknown</h3>
-      <ul class="unknowns">{% for u in analysis.unknowns %}<li>{{ u }}</li>{% endfor %}</ul>
+      <ul class="unknowns">{% for u in analysis.unknowns %}<li>{{ u }}{{ fix('unknowns', u) }}</li>{% endfor %}</ul>
       <h3>Canary interpretation</h3>
-      <ul>{% for c in analysis.interpretation %}<li>{{ c }}</li>{% endfor %}</ul>
+      <ul>{% for c in analysis.interpretation %}<li>{{ c }}{{ fix('interpretation', c) }}</li>{% endfor %}</ul>
       {% if analysis.conflicts %}
       <h3>Conflicting or unverified claims</h3>
       <ul class="conflicts">{% for c in analysis.conflicts %}<li><strong>{{ c.topic }}:</strong> {{ c.statement }} {% for i in c.citations %}<a class="cite" href="#src-{{ i }}">[{{ cite[i] }}]</a>{% endfor %}</li>{% endfor %}</ul>
@@ -114,7 +128,11 @@
       <p class="small muted">Exploitation evidence: {{ analysis.exploitation_reason }}{% if analysis.owasp %} · Framework: {{ analysis.owasp }}{% endif %}</p>
     </div>
   </div>
-  <p class="small muted">Analysis is generated per finding version (v{{ analysis_row.finding_version }}) from source metadata only; source text is treated as untrusted input. No API key is used in demo mode.</p>
+  <p class="small muted">Analysis is generated per finding version (v{{ analysis_row.finding_version }}) from source metadata only; source text is treated as untrusted input. No API key is used in demo mode. Human corrections are shown in place and never overwrite the generated record.</p>
+  {% if corrections %}
+  <h3>Correction history</h3>
+  <ul class="events">{% for c in corrections|reverse %}<li><span class="muted small">{{ c.created_at }}</span> <strong>{{ c.editor }}</strong> — {{ CORRECTABLE_SECTIONS[c.section] }}: “{{ c.prior_value }}” → “{{ c.new_value }}”. Reason: {{ c.reason }}</li>{% endfor %}</ul>
+  {% endif %}
 </section>
 {% endif %}
 
