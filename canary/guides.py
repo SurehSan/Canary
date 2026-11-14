@@ -89,6 +89,10 @@ def _known_answer(spec, inventory):
     return (items[0] if items else None), None
 
 
+def _label(source):
+    return source.get("source_label") or "Cited source"
+
+
 def build_guide(technique, inventory, sources):
     by_url = {s["url"]: s for s in sources}
     template = TEMPLATES.get(technique)
@@ -96,9 +100,9 @@ def build_guide(technique, inventory, sources):
     steps = []
     for n, t in enumerate(template or GENERIC, start=1):
         if t["sources"] is None:  # generic: link to whatever the finding cites
-            links = [{"title": "Cited source", "url": s["url"]} for s in sources]
+            links = [{"title": _label(s), "url": s["url"]} for s in sources]
         else:
-            links = [{"title": "Cited source", "url": u} for u in t["sources"] if u in by_url]
+            links = [{"title": _label(by_url[u]), "url": u} for u in t["sources"] if u in by_url]
         links += t["framework"]
         step = {"position": n, "action": t["action"], "rationale": t["rationale"], "checks": t["checks"],
                 "technique": t["technique"], "basis": t["basis"], "links": links,

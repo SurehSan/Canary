@@ -64,8 +64,16 @@ production mode and no mock-inbox fallback. Unchanged reassessments are
 **Suppressed**; material changes (priority, relevance, exploitation status,
 affected products, or source evidence) send an **Update**. Automated tests use
 a local SMTP capture server ([tests/smtp_capture.py](tests/smtp_capture.py)).
-**Real inbox delivery has not been verified**: no team SMTP account or test
-address was available when this was built.
+**Real inbox delivery was verified on 2026-11-14.** Sending through Gmail SMTP
+(an App Password) to a team-owned university inbox on the allowlist, the delivery
+check and the P2 HalluSquatting alert were both accepted and received, and an
+address off the allowlist was rejected before any send. Use a Gmail
+(or similar) sender: the team's university Microsoft 365 tenant disables SMTP
+AUTH (`535 5.7.139 SmtpClientAuthentication is disabled for the Tenant`), which
+the app correctly records as **Failed** (code 535). Gmail settings:
+`CANARY_SMTP_HOST=smtp.gmail.com`, port 587, STARTTLS on, username and From both
+set to the Gmail address, and the password set to a Gmail App Password (not the
+account password).
 
 ## Technical decisions (recorded per the implementation plan)
 
@@ -205,7 +213,7 @@ The automated version of this walkthrough is
 | 006 | Deterministic demo analysis with citations, unknowns, conflicts; human corrections with prior value, editor, timestamp, and reason, shown in place, carried into emails, kept across re-analysis. Optional OpenAI provider not built (deterministic demo analysis is the documented fallback) |
 | 007 | Match states, full rubric, P1 gate, factor display, reviewer override with reason |
 | 008 | List, filters, unread, assignment, all statuses with transition rules and note requirement, update indicator |
-| 009 | Allowlist-before-send, routing by category/member, P1 immediate / P2 cycle / P3–P4 digest, suppression, updates, failure + retry, delivery log, test labels. **Unverified:** real inbox delivery (no SMTP account) |
+| 009 | Allowlist-before-send, routing by category/member, P1 immediate / P2 cycle / P3–P4 digest, suppression, updates, failure + retry, delivery log, test labels. Real inbox delivery verified 2026-11-14 via Gmail SMTP to an allowlisted team inbox |
 | 010 | OWASP LLM 2025 mapped questions with help text, Yes/No/Partial/Unknown/N/A, append-only assessments, explained threat weighting (answers never rewritten), reassessment rescoring |
 | 011 | Guide from alert (no questionnaire needed), 5 ordered steps with rationale/checks/technique/basis/links, one targeted question with Unknown, conditional step, step status + edits audited, limited generic guide for unknown threats |
 | 012 | Plan from guide, applicable stages only, owners, review/due dates, Draft → In review → Approved (Admin only, explicit confirmation) → Archived, approved version preserved on edit, version history |
@@ -224,7 +232,7 @@ The automated version of this walkthrough is
   News RSS; CSA, GitHub Security Advisories, and OWASP GenAI stay offline.
   Live items that match no curated technique get a minimal "unverified" analysis
   and usually no alert.
-- Real SMTP delivery is implemented but has not been verified against a real inbox.
+- Real SMTP delivery was verified once (Gmail SMTP to an allowlisted team inbox). University Microsoft 365 accounts cannot send because SMTP AUTH is disabled tenant-wide.
 - Session key is random per process unless `CANARY_SECRET_KEY` is set.
 - The audit log is an application history, not tamper-proof.
 - Grouping confirm/undo changes a global finding, which affects every
