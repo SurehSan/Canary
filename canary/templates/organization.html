@@ -1,7 +1,22 @@
 {% extends "base.html" %}
 {% block title %}Organization{% endblock %}
+{% macro inv_fields(i=None) -%}
+  <label>Name * <input name="name" value="{{ i.name if i else '' }}" required></label>
+  <label>Category <input name="category" value="{{ i.category or '' if i else '' }}" placeholder="e.g. Coding assistant"></label>
+  <label>Product key <input name="product_key" value="{{ i.product_key or '' if i else '' }}" placeholder="used for exact matching"></label>
+  <label>Version <input name="version" value="{{ i.version or '' if i else '' }}" placeholder="blank = Unknown"></label>
+  <label>Version status <select name="version_status">
+    <option value="known" {{ 'selected' if i and i.version_status == 'known' }}>Known</option>
+    <option value="unconfirmed" {{ 'selected' if i and i.version_status == 'unconfirmed' }}>Unconfirmed</option></select></label>
+  <label>Owner / team <input name="owner_team" value="{{ i.owner_team or '' if i else '' }}"></label>
+  <label>Criticality <select name="criticality">{% for c in CRITICALITIES %}<option {{ 'selected' if (i and i.criticality == c) or (not i and c == 'Unknown') }}>{{ c }}</option>{% endfor %}</select></label>
+  <label>Capability tags <input name="capabilities" value="{{ (i.capabilities|fromjson)|join(', ') if i else '' }}" placeholder="e.g. ai_coding_agent, auto_install_packages"></label>
+  <label>Capability notes <input name="capability_notes" value="{{ i.capability_notes or '' if i else '' }}"></label>
+  <label>Vendor data-access notes (optional; only if you are authorized to share) <input name="data_access_notes" value="{{ i.data_access_notes or '' if i else '' }}"></label>
+{%- endmacro %}
 {% block content %}
-<h1>{{ g.org.name }} <span class="tag">Demo data</span></h1>
+<h1>{{ g.org.name }} {% if g.org.is_demo %}<span class="tag">Demo data</span>{% endif %}</h1>
+
 <section class="card">
   <h2>Profile</h2>
   <dl class="kv">
@@ -11,33 +26,60 @@
     <dt>Monitoring interests</dt><dd>{{ g.org.monitoring_interests or 'Unknown' }}</dd>
     <dt>Last updated</dt><dd>{{ g.org.updated_at }}</dd>
   </dl>
+  {% if g.role == 'admin' %}
+  <details><summary class="small">Edit profile</summary>
+    <form method="post" action="{{ url_for('main.edit_profile') }}" class="inv-form">
+      <label>Name * <input name="name" value="{{ g.org.name }}" required></label>
+      <label>Industry * <input name="industry" value="{{ g.org.industry }}" required></label>
+      <label>Size <input name="size" value="{{ g.org.size or '' }}" placeholder="blank = Unknown"></label>
+      <label>Location <input name="location" value="{{ g.org.location or '' }}" placeholder="blank = Unknown"></label>
+      <label>Monitoring interests <input name="monitoring_interests" value="{{ g.org.monitoring_interests or '' }}"></label>
+      <button class="btn small">Save profile</button>
+    </form>
+  </details>
+  {% endif %}
 </section>
 
-<section class="card">
+<section class="card" id="inventory">
   <h2>AI inventory</h2>
-  <p class="muted small">Missing values are stored as Unknown and never produce a confirmed match.</p>
+  <p class="muted small">Missing values are stored as Unknown and never produce a confirmed match. Changes re-run relevance for this organization's alerts.</p>
   <div class="table-wrap"><table class="tbl">
     <thead><tr><th>Item</th><th>Category</th><th>Version</th><th>Criticality</th><th>Owner</th><th>Notes</th></tr></thead>
     <tbody>
     {% for i in inventory %}
-      <tr><td><strong>{{ i.name }}</strong>{% if i.is_demo %} <span class="tag">Fictional</span>{% endif %}</td>
+      <tr><td><strong>{{ i.name }}</strong>{% if i.is_demo %} <span class="tag">Fictional</span>{% endif %}
+          {% if g.role in ('admin', 'lead') %}
+          <details><summary class="small">Edit</summary>
+            <form method="post" action="{{ url_for('main.edit_inventory', item_id=i.id) }}" class="inv-form">{{ inv_fields(i) }}<button class="btn small">Save</button></form>
+            <form method="post" action="{{ url_for('main.delete_inventory', item_id=i.id) }}" onsubmit="return confirm('Remove {{ i.name }} from the inventory?');"><button class="btn small danger">Remove item</button></form>
+          </details>{% endif %}</td>
         <td>{{ i.category or 'Unknown' }}</td>
-        <td>{% if i.version %}{{ i.version }}{% else %}<span class="unknown">Unknown</span>{% endif %}</td>
+        <td>{% if i.version %}{{ i.version }}{% if i.version_status == 'unconfirmed' %} <span class="unknown">(unconfirmed)</span>{% endif %}{% else %}<span class="unknown">Unknown</span>{% endif %}</td>
         <td>{{ i.criticality }}</td><td>{{ i.owner_team or 'Unknown' }}</td>
         <td class="small">{{ i.capability_notes or '' }}{% if i.data_access_notes %}<br><span class="muted">Data access: {{ i.data_access_notes }}</span>{% endif %}</td></tr>
     {% endfor %}
     </tbody>
   </table></div>
+  {% if g.role in ('admin', 'lead') %}
+  <details><summary class="small">Add inventory item</summary>
+    <form method="post" action="{{ url_for('main.add_inventory') }}" class="inv-form">{{ inv_fields() }}<button class="btn small primary">Add item</button></form>
+  </details>
+  {% endif %}
 </section>
 
-<section class="card">
+<section class="card" id="members">
   <h2>Members</h2>
-  <p class="muted small">Invitations are simulated; no invite email is sent.</p>
+  <p class="muted small">Invitations are simulated: an Administrator adds an existing local account and no email is sent.</p>
   <table class="tbl">
     <thead><tr><th>Name</th><th>Role</th><th>Status</th><th></th></tr></thead>
     <tbody>
     {% for m in members %}
-      <tr><td>{{ m.display_name }} <span class="muted small">{{ m.title }}</span></td><td>{{ ROLE_LABELS[m.role] }}</td>
+      <tr><td>{{ m.display_name }} <span class="muted small">{{ m.title }}</span></td>
+        <td>{% if g.role == 'admin' and m.status == 'active' %}
+          <form method="post" action="{{ url_for('main.change_role', user_id=m.id) }}" class="inline-form">
+            <select name="role">{% for r, label in ROLE_LABELS.items() %}<option value="{{ r }}" {{ 'selected' if r == m.role }}>{{ label }}</option>{% endfor %}</select>
+            <button class="btn small ghost">Change</button></form>
+          {% else %}{{ ROLE_LABELS[m.role] }}{% endif %}</td>
         <td>{{ m.status|capitalize }}</td>
         <td>{% if g.role == 'admin' and m.status == 'active' and m.id != g.user.id %}
           <form method="post" action="{{ url_for('main.revoke_member', user_id=m.id) }}"
@@ -46,11 +88,18 @@
     {% endfor %}
     </tbody>
   </table>
+  {% if g.role == 'admin' %}
+  <form method="post" action="{{ url_for('main.invite_member') }}" class="inline-form" style="margin-top:.7rem">
+    <input name="username" placeholder="existing username" required>
+    <select name="role"><option value="lead">Cybersecurity Lead</option><option value="admin">Administrator</option></select>
+    <button class="btn small">Invite (simulated)</button>
+  </form>
+  {% endif %}
 </section>
 
 <section class="card">
   <h2>Security questionnaire history</h2>
-  <p class="muted small">OWASP Top 10 for LLM Applications (2025) mapping. New assessments never overwrite earlier ones.</p>
+  <p class="muted small">OWASP Top 10 for LLM Applications (2025) mapping. New assessments never overwrite earlier ones. <a href="{{ url_for('main.questionnaire') }}">Open questionnaire →</a></p>
   {% for s in assessments %}
     <h3>{{ s.created_at }} · {{ s.respondent or 'Unknown respondent' }} {% if s.is_demo %}<span class="tag">Fictional demo context</span>{% endif %}</h3>
     <ul class="plain">{% for a in answers[s.id] %}

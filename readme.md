@@ -195,13 +195,13 @@ The automated version of this walkthrough is
 
 ## Requirement coverage status
 
-| Req | Status after slice 3 |
+| Req | Status after slice 4 |
 |---|---|
-| 001 | Demo accounts, roles, org selection, server-side role checks, revocation. **Pending:** create org, simulated invite, role change |
-| 002 | Profile and inventory with Unknown values (read-only). **Pending:** edit forms |
+| 001 | Demo accounts plus local registration, create organization (creator becomes Administrator), simulated invite of an existing account, role change (last Administrator protected), revocation, server-side role checks, 404 on other organizations' records |
+| 002 | Profile editing (Admin; name and industry required, others optional/Unknown), inventory add/edit/remove (Admin, Lead) with Unknown/Unconfirmed versions, capability tags, optional data-access notes; changes are audited and rescore alerts |
 | 003 / 004 | Catalog, enable/disable, manual + hourly collection, run log with adapter, retries, simulated outage, optional live THN RSS with min-interval skip, collected-items list |
 | 005 | Canonical finding, exact/proposed grouping, confirm/undo, revisions, follow-up evidence update |
-| 006 | Deterministic demo analysis with citations, unknowns, conflicts. **Pending:** user correction UI, optional OpenAI provider |
+| 006 | Deterministic demo analysis with citations, unknowns, conflicts; human corrections with prior value, editor, timestamp, and reason, shown in place, carried into emails, kept across re-analysis. Optional OpenAI provider not built (deterministic demo analysis is the documented fallback) |
 | 007 | Match states, full rubric, P1 gate, factor display, reviewer override with reason |
 | 008 | List, filters, unread, assignment, all statuses with transition rules and note requirement, update indicator |
 | 009 | Allowlist-before-send, routing by category/member, P1 immediate / P2 cycle / P3–P4 digest, suppression, updates, failure + retry, delivery log, test labels. **Unverified:** real inbox delivery (no SMTP account) |
@@ -210,10 +210,14 @@ The automated version of this walkthrough is
 | 012 | Plan from guide, applicable stages only, owners, review/due dates, Draft → In review → Approved (Admin only, explicit confirmation) → Archived, approved version preserved on edit, version history |
 | 013 | Dashboard counts from records (incl. open plans, plans awaiting approval, waiting guide questions), source health |
 | 014 | Audit events for login, membership, sources, collection, alerts, grouping, overrides, notifications, guide answers/progress/edits, plan lifecycle, questionnaire |
-| 015 | Org scoping, 404 on cross-org access, local-only binding, reset, secrets env-only. **Pending:** data-flow disclosure page |
+| 015 | Org scoping (20-route cross-org test), per-org demo simulations, local-only binding, reset, secrets env-only, sanitized SMTP errors, in-app **Privacy and data flows** page |
 | 016 | Demo banner, fictional labels, source notes, reset, simulation labels |
 
 ## Known limitations
+
+- No CSRF tokens and no explicit SameSite cookie setting. Acceptable only for this
+  loopback-only demo (agreed in the Codex review). Required before any shared or
+  hosted use.
 
 - Offline fixture records are the default. Live mode covers only The Hacker
   News RSS; CSA, GitHub Security Advisories, and OWASP GenAI stay offline.

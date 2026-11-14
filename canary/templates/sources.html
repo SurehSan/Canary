@@ -27,7 +27,7 @@
         <td><strong>{{ h.source.name }}</strong><br><span class="muted small">{{ h.source.topics }} · tier {{ h.source.tier }}</span></td>
         <td class="small">{{ h.source.method }}<div class="muted">{{ FIXTURE_ADAPTER }}{% if live_on and h.source.key in live_feeds %} + Live RSS{% endif %}</div></td>
         <td><span class="state {{ h.state|lower|replace(' ', '-') }}">{{ h.state }}</span>
-          {% if h.source.simulate_failure %}<div class="tag sim">Simulated outage on</div>{% endif %}
+          {% if h.source.simulate_failure %}<div class="tag sim">Simulated outage on (this organization only)</div>{% endif %}
           {% if h.state == 'Failed' %}<div class="small err">{{ h.last.error }} ({{ h.last.attempts }} attempts)</div>{% endif %}</td>
         <td class="small">{{ h.last.finished_at if h.last else '—' }}</td>
         <td class="small">{{ h.last_ok or '—' }}</td>
@@ -65,7 +65,8 @@
     <form method="post" action="{{ url_for('main.followup_evidence') }}">
       <button class="btn small" {{ 'disabled' if followup_done }}>Demo step: deliver later follow-up report (Xygeni)</button></form>
     {% endif %}</div>
-  <p class="small muted">Stored per item: link, title, publication date when supplied, retrieval time, and a short excerpt. Full articles are not stored.</p>
+  <p class="small muted">Stored per item: link, title, publication date when supplied, retrieval time, and a short excerpt. Full articles are not stored.
+    Collected evidence is shared: the follow-up demo step attaches a report to the shared finding, which affects every organization that receives that finding.</p>
   <div class="table-wrap"><table class="tbl">
     <thead><tr><th>Item</th><th>Source / adapter</th><th>Published</th><th>Retrieved</th></tr></thead>
     <tbody>{% for i in items %}

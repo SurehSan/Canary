@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from flask import Blueprint, abort, current_app, flash, g, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash
 
+from .analysis import apply_corrections, corrections_for
 from .auth import ROLE_LABELS, actor_label, login_required, org_required, role_required
 from .collector import FIXTURE_ADAPTER, bump_revision, ingest_item, run_collection, snapshot_revision
 from .db import audit, get_db, now_iso
@@ -102,14 +103,15 @@ def select_org():
 # ---------------------------------------------------------------- dashboard
 def source_health(db, org_id, now):
     rows = db.execute(
-        "SELECT c.*, os.enabled FROM source_catalog c JOIN org_sources os ON os.source_id=c.id"
+        "SELECT c.*, os.enabled, os.simulate_failure FROM source_catalog c JOIN org_sources os ON os.source_id=c.id"
         " WHERE os.org_id=? ORDER BY c.id", (org_id,)).fetchall()
     out = []
+    scope = "(org_id IS NULL OR org_id=?)"  # shared runs plus this org's own simulated outages
     for s in rows:
-        last = db.execute("SELECT * FROM collection_runs WHERE source_id=? AND outcome!='skipped'"
-                          " ORDER BY id DESC LIMIT 1", (s["id"],)).fetchone()
-        last_ok = db.execute("SELECT finished_at FROM collection_runs WHERE source_id=? AND outcome IN"
-                             " ('success','success_no_new') ORDER BY id DESC LIMIT 1", (s["id"],)).fetchone()
+        last = db.execute(f"SELECT * FROM collection_runs WHERE source_id=? AND {scope} AND outcome!='skipped'"
+                          " ORDER BY id DESC LIMIT 1", (s["id"], org_id)).fetchone()
+        last_ok = db.execute(f"SELECT finished_at FROM collection_runs WHERE source_id=? AND {scope} AND outcome IN"
+                             " ('success','success_no_new') ORDER BY id DESC LIMIT 1", (s["id"], org_id)).fetchone()
         if not s["enabled"]:
             state = "Disabled"
         elif last is None:
@@ -205,7 +207,8 @@ def sources():
     health = source_health(db, g.org["id"], datetime.fromisoformat(now_iso()))
     runs = db.execute("SELECT r.*, c.name FROM collection_runs r JOIN source_catalog c ON c.id=r.source_id"
                       " JOIN org_sources os ON os.source_id=c.id AND os.org_id=?"
-                      " ORDER BY r.id DESC LIMIT 12", (g.org["id"],)).fetchall()
+                      " WHERE r.org_id IS NULL OR r.org_id=?"
+                      " ORDER BY r.id DESC LIMIT 12", (g.org["id"], g.org["id"])).fetchall()
     items = db.execute("SELECT si.*, r.adapter FROM source_items si LEFT JOIN collection_runs r ON r.id=si.collection_run_id"
                        " WHERE si.source_id IS NULL OR si.source_id IN"
                        " (SELECT source_id FROM org_sources WHERE org_id=? AND enabled=1)"
@@ -236,14 +239,16 @@ def toggle_source(source_id):
 @role_required("admin")
 def simulate_failure(source_id):
     db = get_db()
-    src = db.execute("SELECT * FROM source_catalog WHERE id=?", (source_id,)).fetchone()
+    src = db.execute("SELECT c.name, os.simulate_failure FROM org_sources os JOIN source_catalog c ON c.id=os.source_id"
+                     " WHERE os.org_id=? AND os.source_id=?", (g.org["id"], source_id)).fetchone()
     if src is None:
         abort(404)
     new = 0 if src["simulate_failure"] else 1
-    db.execute("UPDATE source_catalog SET simulate_failure=? WHERE id=?", (new, source_id))
+    db.execute("UPDATE org_sources SET simulate_failure=? WHERE org_id=? AND source_id=?",
+               (new, g.org["id"], source_id))
     audit(db, org_id=g.org["id"], actor_id=g.user["id"], actor_label=actor_label(), action="source.simulation",
           target_type="source", target_id=source_id,
-          summary=f"Demo simulation: {src['name']} outage {'on' if new else 'off'}")
+          summary=f"Demo simulation for this organization only: {src['name']} outage {'on' if new else 'off'}")
     commit()
     return redirect(url_for("main.sources"))
 
@@ -298,7 +303,8 @@ def alert_detail(alert_id):
     rel = db.execute("SELECT * FROM relevance WHERE org_id=? AND finding_id=?", (g.org["id"], finding["id"])).fetchone()
     analysis_row = db.execute("SELECT * FROM analyses WHERE org_id=? AND finding_id=? ORDER BY id DESC LIMIT 1",
                               (g.org["id"], finding["id"])).fetchone()
-    analysis = json.loads(analysis_row["payload"]) if analysis_row else None
+    corrections = corrections_for(db, g.org["id"], finding["id"])
+    analysis = apply_corrections(json.loads(analysis_row["payload"]), corrections) if analysis_row else None
     members = db.execute("SELECT u.id, u.display_name, m.role FROM memberships m JOIN users u ON u.id=m.user_id"
                          " WHERE m.org_id=? AND m.status='active' ORDER BY u.id", (g.org["id"],)).fetchall()
     revisions = db.execute("SELECT * FROM finding_revisions WHERE finding_id=? ORDER BY version DESC",
@@ -314,7 +320,7 @@ def alert_detail(alert_id):
     plan = db.execute("SELECT id, title FROM plans WHERE alert_id=? AND org_id=? ORDER BY id DESC LIMIT 1",
                       (alert_id, g.org["id"])).fetchone()
     return render_template("alert.html", alert=alert, finding=finding, items=items, rel=rel, analysis=analysis,
-                           notes=notes, overrider=overrider, guide=guide, plan=plan,
+                           notes=notes, overrider=overrider, guide=guide, plan=plan, corrections=corrections,
                            analysis_row=analysis_row, members=members, revisions=revisions, history=history,
                            cite=cite, next_states=ALERT_TRANSITIONS.get(alert["status"], []),
                            note_required=NOTE_REQUIRED)

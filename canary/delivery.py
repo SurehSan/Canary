@@ -11,6 +11,7 @@ from email.message import EmailMessage
 
 from flask import current_app
 
+from .analysis import apply_corrections, corrections_for
 from .db import audit, now_iso
 from .notify import SUBJECT_PREFIX, TEST_NOTICE, build_digest, build_message, cadence_for, check_recipient, fingerprint
 
@@ -43,7 +44,9 @@ def alert_context(conn, alert_id):
     org = conn.execute("SELECT name FROM organizations WHERE id=?", (a["org_id"],)).fetchone()
     an_row = conn.execute("SELECT payload FROM analyses WHERE org_id=? AND finding_id=? ORDER BY id DESC LIMIT 1",
                           (a["org_id"], f["id"])).fetchone()
-    analysis = json.loads(an_row["payload"]) if an_row else {}
+    analysis = {}
+    if an_row:  # human corrections (CAN-REQ-006) also apply to email content
+        analysis = apply_corrections(json.loads(an_row["payload"]), corrections_for(conn, a["org_id"], f["id"]))
     items = conn.execute("SELECT * FROM source_items WHERE finding_id=? ORDER BY id", (f["id"],)).fetchall()
     n_of = {i["id"]: n for n, i in enumerate(items, start=1)}
     priority = r["override_priority"] or r["priority"]
@@ -115,6 +118,17 @@ def _send_smtp(to_addr, subject, body):
         smtp.send_message(msg)
 
 
+def safe_smtp_error(exc):
+    """Record only the error type and numeric SMTP/OS code, never provider-controlled text (CDX-2)."""
+    code = getattr(exc, "smtp_code", None)
+    if code is None and isinstance(exc, smtplib.SMTPRecipientsRefused):
+        codes = {c for c, _msg in exc.recipients.values()}
+        code = ",".join(str(c) for c in sorted(codes)) or None
+    if code is None:
+        code = getattr(exc, "errno", None)
+    return f"SMTP error: {type(exc).__name__}" + (f" (code {code})" if code is not None else "")
+
+
 def _precheck(conn, org_id, email):
     reason = check_recipient(email, current_app.config.get("EMAIL_ALLOWLIST") or set())
     if reason:
@@ -142,7 +156,7 @@ def dispatch(conn, notif_id, actor_label="System notifier"):
             _send_smtp(email, n["subject"], n["body"])
             status, error = "sent", None
         except (smtplib.SMTPException, OSError) as exc:
-            status, error = "failed", f"SMTP error: {type(exc).__name__}: {str(exc)[:200]}"
+            status, error = "failed", safe_smtp_error(exc)
     ts = now_iso()
     where, key = ("digest_batch=?", n["digest_batch"]) if n["digest_batch"] else ("id=?", notif_id)
     conn.execute(f"UPDATE notifications SET status=?, error=?, simulated=?, recipient_email=?, attempts=attempts+1,"

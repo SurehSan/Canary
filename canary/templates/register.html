@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Create account{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>Create a local demo account</h1>
+  <p class="muted">Demo authentication only: the account exists in this local database until the demo is reset. No
+    email, SSO, MFA, or account recovery. Do not reuse a real password.</p>
+  <form method="post" class="stack">
+    <label>Username (3–20 lowercase letters, digits, or _) <input name="username" pattern="[a-z0-9_]{3,20}" required></label>
+    <label>Display name <input name="display_name" required></label>
+    <label>Password (at least 8 characters) <input name="password" type="password" minlength="8" required></label>
+    <button class="btn primary">Create account</button>
+  </form>
+  <p class="small"><a href="{{ url_for('main.login') }}">Back to sign in</a></p>
+</section>
+{% endblock %}

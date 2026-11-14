@@ -10,7 +10,7 @@ from .scoring import match_state, score_priority
 def orgs_for_finding(conn, finding_id):
     rows = conn.execute(
         "SELECT DISTINCT os.org_id FROM org_sources os JOIN source_items si ON si.source_id = os.source_id"
-        " WHERE os.enabled = 1 AND si.finding_id = ?"
+        " WHERE os.enabled = 1 AND os.simulate_failure = 0 AND si.finding_id = ?"
         " UNION SELECT org_id FROM relevance WHERE finding_id = ?", (finding_id, finding_id))
     return [r[0] for r in rows]
 

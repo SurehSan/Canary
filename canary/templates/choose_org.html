@@ -12,7 +12,14 @@
     <button class="btn">Open</button>
   </form>
   {% else %}
-  <p>You do not have access to any organization.</p>
+  <p>You do not have access to any organization yet.</p>
   {% endfor %}
+  <h2 class="sub">Create an organization</h2>
+  <p class="small muted">You become its first Administrator. All catalog sources start enabled; add your AI inventory next.</p>
+  <form method="post" action="{{ url_for('main.create_org') }}" class="stack">
+    <label>Organization name <input name="name" required></label>
+    <label>Industry <input name="industry" required></label>
+    <button class="btn primary">Create organization</button>
+  </form>
 </section>
 {% endblock %}

@@ -6,6 +6,7 @@
 PRAGMA foreign_keys = ON;
 
 DROP TABLE IF EXISTS audit_events;
+DROP TABLE IF EXISTS analysis_corrections;
 DROP TABLE IF EXISTS plan_versions;
 DROP TABLE IF EXISTS plan_actions;
 DROP TABLE IF EXISTS plans;
@@ -89,20 +90,21 @@ CREATE TABLE source_catalog (
     url TEXT NOT NULL,
     tier TEXT NOT NULL CHECK (tier IN ('A', 'B', 'C')),
     topics TEXT,
-    method TEXT NOT NULL,
-    simulate_failure INTEGER NOT NULL DEFAULT 0   -- demo-only outage switch
+    method TEXT NOT NULL
 );
 
 CREATE TABLE org_sources (
     org_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     source_id INTEGER NOT NULL REFERENCES source_catalog(id) ON DELETE CASCADE,
     enabled INTEGER NOT NULL DEFAULT 1,
+    simulate_failure INTEGER NOT NULL DEFAULT 0,   -- demo-only outage switch, scoped to this org
     PRIMARY KEY (org_id, source_id)
 );
 
 CREATE TABLE collection_runs (
     id INTEGER PRIMARY KEY,
     source_id INTEGER NOT NULL REFERENCES source_catalog(id) ON DELETE CASCADE,
+    org_id INTEGER REFERENCES organizations(id) ON DELETE CASCADE,  -- NULL = shared run; set = org-only simulated outage
     trigger TEXT NOT NULL CHECK (trigger IN ('manual', 'scheduled')),
     adapter TEXT NOT NULL,
     started_at TEXT NOT NULL,
@@ -368,5 +370,18 @@ CREATE TABLE plan_versions (
     actor_id INTEGER REFERENCES users(id),
     actor_label TEXT NOT NULL,
     note TEXT,
+    created_at TEXT NOT NULL
+);
+
+-- CAN-REQ-006 human corrections to generated analysis (provenance kept; generated text is never overwritten)
+CREATE TABLE analysis_corrections (
+    id INTEGER PRIMARY KEY,
+    org_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    finding_id INTEGER NOT NULL REFERENCES findings(id) ON DELETE CASCADE,
+    section TEXT NOT NULL,
+    prior_value TEXT NOT NULL,
+    new_value TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    editor_id INTEGER REFERENCES users(id),
     created_at TEXT NOT NULL
 );

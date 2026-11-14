@@ -11,6 +11,7 @@
     <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
     <button class="btn primary">Sign in</button>
   </form>
+  <p class="small">New here? <a href="{{ url_for('main.register') }}">Create a local demo account</a>, then create your own organization.</p>
   <h2 class="sub">Demo accounts (fictional)</h2>
   <ul class="plain">
     {% for a in accounts %}<li><code>{{ a.username }}</code> — {{ a.display_name }}, {{ a.title }}</li>{% endfor %}
