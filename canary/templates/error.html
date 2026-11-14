@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{{ error.code }}{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>{% if error.code == 404 %}Not found{% elif error.code == 403 %}Not permitted{% else %}Request not accepted{% endif %}</h1>
+  <p>{% if error.code == 404 %}This record does not exist in the selected organization.{% else %}{{ error.description }}{% endif %}</p>
+  <p><a href="{{ url_for('main.dashboard') }}">Back to dashboard</a></p>
+</section>
+{% endblock %}

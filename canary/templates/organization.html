@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Organization{% endblock %}
+{% block content %}
+<h1>{{ g.org.name }} <span class="tag">Demo data</span></h1>
+<section class="card">
+  <h2>Profile</h2>
+  <dl class="kv">
+    <dt>Industry</dt><dd>{{ g.org.industry }}</dd>
+    <dt>Size</dt><dd>{{ g.org.size or 'Unknown' }}</dd>
+    <dt>Location</dt><dd>{{ g.org.location or 'Unknown' }}</dd>
+    <dt>Monitoring interests</dt><dd>{{ g.org.monitoring_interests or 'Unknown' }}</dd>
+    <dt>Last updated</dt><dd>{{ g.org.updated_at }}</dd>
+  </dl>
+</section>
+
+<section class="card">
+  <h2>AI inventory</h2>
+  <p class="muted small">Missing values are stored as Unknown and never produce a confirmed match.</p>
+  <div class="table-wrap"><table class="tbl">
+    <thead><tr><th>Item</th><th>Category</th><th>Version</th><th>Criticality</th><th>Owner</th><th>Notes</th></tr></thead>
+    <tbody>
+    {% for i in inventory %}
+      <tr><td><strong>{{ i.name }}</strong>{% if i.is_demo %} <span class="tag">Fictional</span>{% endif %}</td>
+        <td>{{ i.category or 'Unknown' }}</td>
+        <td>{% if i.version %}{{ i.version }}{% else %}<span class="unknown">Unknown</span>{% endif %}</td>
+        <td>{{ i.criticality }}</td><td>{{ i.owner_team or 'Unknown' }}</td>
+        <td class="small">{{ i.capability_notes or '' }}{% if i.data_access_notes %}<br><span class="muted">Data access: {{ i.data_access_notes }}</span>{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+
+<section class="card">
+  <h2>Members</h2>
+  <p class="muted small">Invitations are simulated; no invite email is sent.</p>
+  <table class="tbl">
+    <thead><tr><th>Name</th><th>Role</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    {% for m in members %}
+      <tr><td>{{ m.display_name }} <span class="muted small">{{ m.title }}</span></td><td>{{ ROLE_LABELS[m.role] }}</td>
+        <td>{{ m.status|capitalize }}</td>
+        <td>{% if g.role == 'admin' and m.status == 'active' and m.id != g.user.id %}
+          <form method="post" action="{{ url_for('main.revoke_member', user_id=m.id) }}"
+                onsubmit="return confirm('Revoke {{ m.display_name }}\'s access to this organization?');">
+            <button class="btn small">Revoke access</button></form>{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="card">
+  <h2>Security questionnaire history</h2>
+  <p class="muted small">OWASP Top 10 for LLM Applications (2025) mapping. New assessments never overwrite earlier ones.</p>
+  {% for s in assessments %}
+    <h3>{{ s.created_at }} · {{ s.respondent or 'Unknown respondent' }} {% if s.is_demo %}<span class="tag">Fictional demo context</span>{% endif %}</h3>
+    <ul class="plain">{% for a in answers[s.id] %}
+      <li><strong>{{ a.answer }}</strong> — {{ a.text }} <a href="{{ a.framework_url }}" target="_blank" rel="noopener">{{ a.framework_ref }}</a></li>
+    {% endfor %}</ul>
+  {% else %}<p class="muted">No assessments yet.</p>{% endfor %}
+</section>
+{% endblock %}

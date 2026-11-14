@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Alert #{{ alert.id }}{% endblock %}
+{% block content %}
+{% set prio = rel.override_priority or rel.priority %}
+<p><a href="{{ url_for('main.alerts') }}">← Alerts</a></p>
+<div class="alert-head">
+  <span class="prio big {{ prio }}">{{ PRIORITY_LABELS[prio] }}</span>
+  <div class="grow">
+    <h1>{{ finding.title }}</h1>
+    <p class="muted">{{ MATCH_LABELS[rel.match_state] }} · Score {{ rel.score }}/100 · Status: <strong>{{ ALERT_STATUSES[alert.status] }}</strong>
+      · Category: {{ alert.category|capitalize }} · Created {{ alert.created_at }}
+      {% if alert.has_update %}<span class="tag update">Updated evidence since first alert</span>{% endif %}</p>
+  </div>
+</div>
+<div class="notice">Priority and match state are a triage recommendation, not evidence of exposure or compromise.
+  Exposure can only be confirmed by a person, with an evidence note.</div>
+
+<div class="grid-2">
+  <section class="card">
+    <h2>Why this may matter to {{ g.org.name }}</h2>
+    <p><strong>{{ MATCH_LABELS[rel.match_state] }}.</strong>
+    {% if rel.match_state == 'possible' %}A technology or product overlaps with your inventory, but version, deployment, or installation evidence is incomplete.{% endif %}</p>
+    <h3>Inventory evidence used</h3>
+    <ul class="plain">{% for e in rel.match_evidence|fromjson %}
+      <li><strong>{{ e.item_name or 'Organization context' }}</strong>{% if e.criticality %} ({{ e.criticality }}){% endif %} — {{ e.reason }}</li>
+    {% else %}<li class="muted">No inventory item matched.</li>{% endfor %}</ul>
+
+    <h3>Priority factors</h3>
+    <table class="tbl factors">
+      <tbody>
+      {% for f in rel.factors|fromjson %}
+        <tr><td>{{ f.label }}</td><td class="pts">{{ f.points }}{% if f.max %}/{{ f.max }}{% endif %}</td><td class="small">{{ f.reason }}</td></tr>
+      {% endfor %}
+      <tr class="total"><td>Total</td><td class="pts">{{ rel.score }}/100</td><td class="small">{{ PRIORITY_LABELS[rel.priority] }} (80–100 P1, 60–79 P2, 35–59 P3, 0–34 P4)</td></tr>
+      </tbody>
+    </table>
+    <p class="small">{{ rel.p1_gate_reason }}</p>
+  </section>
+
+  <section class="card">
+    <h2>Investigation</h2>
+    <dl class="kv">
+      <dt>Assigned to</dt>
+      <dd>{% for m in members if m.id == alert.assignee_id %}{{ m.display_name }}{% else %}<span class="muted">Unassigned</span>{% endfor %}</dd>
+    </dl>
+    {% if g.role in ('admin', 'lead') %}
+    <form method="post" action="{{ url_for('main.assign_alert', alert_id=alert.id) }}" class="inline-form">
+      <select name="assignee_id">{% for m in members %}<option value="{{ m.id }}" {{ 'selected' if m.id == g.user.id }}>{{ m.display_name }} ({{ ROLE_LABELS[m.role] }})</option>{% endfor %}</select>
+      <button class="btn small">Assign</button>
+    </form>
+    {% if next_states %}
+    <form method="post" action="{{ url_for('main.change_status', alert_id=alert.id) }}" class="stack">
+      <label>Move to <select name="status">{% for s in next_states %}<option value="{{ s }}">{{ ALERT_STATUSES[s] }}{% if s in note_required %} (note required){% endif %}</option>{% endfor %}</select></label>
+      <label>Note <textarea name="note" rows="2" placeholder="Required for exposure confirmed, resolved and verified, or risk accepted"></textarea></label>
+      <button class="btn primary small">Update status</button>
+    </form>
+    {% endif %}
+    {% endif %}
+    <h3>History</h3>
+    <ul class="events">{% for h in history %}<li><span class="muted small">{{ h.created_at }}</span> <strong>{{ h.actor_label }}</strong> — {{ h.summary }}</li>{% endfor %}</ul>
+  </section>
+</div>
+
+{% if analysis %}
+<section class="card">
+  <div class="row-between"><h2>Analysis</h2><span class="tag ai">{{ analysis.label }}</span></div>
+  <h3>What happened</h3>
+  {% for w in analysis.what_happened %}<p>{{ w }}</p>{% endfor %}
+  <div class="grid-2">
+    <div class="facts">
+      <h3>Source-supported</h3>
+      <ul>{% for c in analysis.source_supported %}<li>{{ c.text }} {% for i in c.citations %}<a class="cite" href="#src-{{ i }}">[{{ cite[i] }}]</a>{% endfor %}</li>{% endfor %}</ul>
+      <h3>Organization context</h3>
+      <ul>{% for c in analysis.org_context %}<li>{{ c }}</li>{% endfor %}</ul>
+    </div>
+    <div>
+      <h3>Unknown</h3>
+      <ul class="unknowns">{% for u in analysis.unknowns %}<li>{{ u }}</li>{% endfor %}</ul>
+      <h3>Canary interpretation</h3>
+      <ul>{% for c in analysis.interpretation %}<li>{{ c }}</li>{% endfor %}</ul>
+      {% if analysis.conflicts %}
+      <h3>Conflicting or unverified claims</h3>
+      <ul class="conflicts">{% for c in analysis.conflicts %}<li><strong>{{ c.topic }}:</strong> {{ c.statement }} {% for i in c.citations %}<a class="cite" href="#src-{{ i }}">[{{ cite[i] }}]</a>{% endfor %}</li>{% endfor %}</ul>
+      {% endif %}
+      <p class="small muted">Exploitation evidence: {{ analysis.exploitation_reason }}{% if analysis.owasp %} · Framework: {{ analysis.owasp }}{% endif %}</p>
+    </div>
+  </div>
+  <p class="small muted">Analysis is generated per finding version (v{{ analysis_row.finding_version }}) from source metadata only; source text is treated as untrusted input. No API key is used in demo mode.</p>
+</section>
+{% endif %}
+
+<section class="card">
+  <h2>Sources ({{ items|length }})</h2>
+  <ol class="sources">
+  {% for i in items %}
+    <li id="src-{{ i.id }}">
+      <a href="{{ i.url }}" target="_blank" rel="noopener">{{ i.title }}</a><br>
+      <span class="small">{{ i.source_label }} · Published {{ i.published_at or 'not supplied' }} · Retrieved {{ i.retrieved_at }} · Tier {{ i.tier }}</span><br>
+      <span class="small muted">{{ i.url }}</span>
+      {% if i.source_note %}<div class="small note">{{ i.source_note }}</div>{% endif %}
+      <div class="small">Grouping: <strong>{{ i.group_status|capitalize }}</strong> — {{ i.group_basis }}</div>
+      {% if i.group_status == 'proposed' and g.role in ('admin', 'lead') %}
+      <div class="actions">
+        <form method="post" action="{{ url_for('main.grouping', alert_id=alert.id, item_id=i.id, action='confirm') }}"><button class="btn small">Confirm grouping</button></form>
+        <form method="post" action="{{ url_for('main.grouping', alert_id=alert.id, item_id=i.id, action='undo') }}"><button class="btn small ghost">Undo grouping</button></form>
+      </div>
+      {% endif %}
+    </li>
+  {% endfor %}
+  </ol>
+</section>
+
+<section class="card">
+  <h2>Finding revisions</h2>
+  <ul class="events">{% for r in revisions %}<li>v{{ r.version }} · <span class="muted small">{{ r.created_at }}</span> · {{ r.actor_label }} — {{ r.change_summary }}</li>{% endfor %}</ul>
+</section>
+{% endblock %}

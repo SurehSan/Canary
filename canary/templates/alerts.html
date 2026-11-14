@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Alerts{% endblock %}
+{% block content %}
+<h1>Alerts</h1>
+<form class="filters" method="get">
+  <label>Priority <select name="priority"><option value="">Any</option>
+    {% for p in ['P1','P2','P3','P4'] %}<option {{ 'selected' if filters.priority == p }}>{{ p }}</option>{% endfor %}</select></label>
+  <label>Status <select name="status"><option value="">Any</option>
+    {% for k, v in ALERT_STATUSES.items() %}<option value="{{ k }}" {{ 'selected' if filters.status == k }}>{{ v }}</option>{% endfor %}</select></label>
+  <label>Category <select name="category"><option value="">Any</option>
+    <option value="cybersecurity" {{ 'selected' if filters.category == 'cybersecurity' }}>Cybersecurity</option></select></label>
+  <label>Since <input type="date" name="since" value="{{ filters.since or '' }}"></label>
+  <label class="inline"><input type="checkbox" name="unread" value="1" {{ 'checked' if filters.unread }}> Unread only</label>
+  <button class="btn">Filter</button>
+</form>
+<section class="card">
+  {% for a in alerts %}
+    <a class="alert-row" href="{{ url_for('main.alert_detail', alert_id=a.id) }}">
+      <span class="prio {{ a.priority }}">{{ a.priority }}</span>
+      <span class="grow">{% if a.unread %}<span class="dot" title="Unread"></span>{% endif %}{{ a.title }}
+        {% if a.has_update %}<span class="tag update">Updated evidence</span>{% endif %}<br>
+        <span class="muted small">{{ MATCH_LABELS[a.match_state] }} · {{ a.score }}/100 · {{ ALERT_STATUSES[a.status] }} · {{ a.category|capitalize }} · {{ a.created_at[:10] }}{% if a.assignee %} · Assigned: {{ a.assignee }}{% endif %}</span></span>
+    </a>
+  {% else %}<p class="muted">No alerts match these filters.</p>{% endfor %}
+</section>
+{% endblock %}

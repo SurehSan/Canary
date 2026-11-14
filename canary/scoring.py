@@ -143,7 +143,7 @@ def score_priority(*, impact_class, exploitation_status, match_state, criticalit
                and match_state == "confirmed" and top_crit == "Critical")
     priority = band(score)
     gate_reason = ("P1 requires credible active exploitation and a Confirmed match to a Critical asset; "
-                   + ("gate met." if p1_gate else "gate not met, so priority is capped at P2."))
+                   + ("gate met." if p1_gate else "gate not met, so this finding cannot be P1."))
     if priority == "P1" and not p1_gate:
         priority = "P2"
     return {"factors": factors, "score": score, "priority": priority,

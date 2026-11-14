@@ -1,0 +1,380 @@
+import json
+from datetime import datetime, timedelta
+
+from flask import Blueprint, abort, flash, g, redirect, render_template, request, session, url_for
+from werkzeug.security import check_password_hash
+
+from .auth import ROLE_LABELS, actor_label, login_required, org_required, role_required
+from .collector import FIXTURE_ADAPTER, bump_revision, run_collection, snapshot_revision
+from .db import audit, get_db, now_iso
+from .pipeline import process_findings
+from .scoring import MATCH_LABELS, PRIORITY_LABELS
+from .seed import reset_demo
+from .workflow import ALERT_STATUSES, ALERT_TRANSITIONS, NOTE_REQUIRED, TransitionError, check_transition
+
+bp = Blueprint("main", __name__)
+
+CLOSED = ("resolved_verified", "not_applicable", "risk_accepted")
+STALE_AFTER = timedelta(hours=2)
+
+
+def register_filters(app):
+    app.jinja_env.filters["fromjson"] = json.loads
+    app.jinja_env.globals.update(ROLE_LABELS=ROLE_LABELS, MATCH_LABELS=MATCH_LABELS, PRIORITY_LABELS=PRIORITY_LABELS,
+                                 ALERT_STATUSES=ALERT_STATUSES, FIXTURE_ADAPTER=FIXTURE_ADAPTER)
+
+    @app.errorhandler(400)
+    @app.errorhandler(403)
+    @app.errorhandler(404)
+    def error_page(err):
+        return render_template("error.html", error=err), err.code
+
+
+def commit():
+    get_db().commit()
+
+
+def org_alert_or_404(alert_id):
+    row = get_db().execute("SELECT * FROM alerts WHERE id=? AND org_id=?", (alert_id, g.org["id"])).fetchone()
+    if row is None:
+        abort(404)
+    return row
+
+
+# ---------------------------------------------------------------- auth / org
+@bp.route("/login", methods=["GET", "POST"])
+def login():
+    error = None
+    if request.method == "POST":
+        db = get_db()
+        user = db.execute("SELECT * FROM users WHERE username=?", (request.form.get("username", "").strip().lower(),)
+                          ).fetchone()
+        if user is None or not check_password_hash(user["password_hash"], request.form.get("password", "")):
+            error = "Invalid username or password."
+        else:
+            session.clear()
+            session["user_id"] = user["id"]
+            orgs = db.execute("SELECT org_id FROM memberships WHERE user_id=? AND status='active'",
+                              (user["id"],)).fetchall()
+            if len(orgs) == 1:
+                session["org_id"] = orgs[0]["org_id"]
+            audit(db, org_id=orgs[0]["org_id"] if len(orgs) == 1 else None, actor_id=user["id"],
+                  actor_label=user["display_name"], action="session.login", target_type="user",
+                  target_id=user["id"], summary="Signed in (demo authentication)")
+            commit()
+            return redirect(url_for("main.dashboard"))
+    accounts = get_db().execute("SELECT username, display_name, title FROM users WHERE is_demo=1 ORDER BY id").fetchall()
+    return render_template("login.html", error=error, accounts=accounts)
+
+
+@bp.post("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("main.login"))
+
+
+@bp.route("/orgs")
+@login_required
+def choose_org():
+    orgs = get_db().execute(
+        "SELECT o.id, o.name, o.industry, m.role FROM organizations o JOIN memberships m ON m.org_id=o.id"
+        " WHERE m.user_id=? AND m.status='active' ORDER BY o.name", (g.user["id"],)).fetchall()
+    return render_template("choose_org.html", orgs=orgs)
+
+
+@bp.post("/orgs/select")
+@login_required
+def select_org():
+    org_id = request.form.get("org_id", type=int)
+    ok = get_db().execute("SELECT 1 FROM memberships WHERE org_id=? AND user_id=? AND status='active'",
+                          (org_id, g.user["id"])).fetchone()
+    if not ok:
+        abort(404)
+    session["org_id"] = org_id
+    return redirect(url_for("main.dashboard"))
+
+
+# ---------------------------------------------------------------- dashboard
+def source_health(db, org_id, now):
+    rows = db.execute(
+        "SELECT c.*, os.enabled FROM source_catalog c JOIN org_sources os ON os.source_id=c.id"
+        " WHERE os.org_id=? ORDER BY c.id", (org_id,)).fetchall()
+    out = []
+    for s in rows:
+        last = db.execute("SELECT * FROM collection_runs WHERE source_id=? ORDER BY id DESC LIMIT 1",
+                          (s["id"],)).fetchone()
+        last_ok = db.execute("SELECT finished_at FROM collection_runs WHERE source_id=? AND outcome!='failed'"
+                             " ORDER BY id DESC LIMIT 1", (s["id"],)).fetchone()
+        if not s["enabled"]:
+            state = "Disabled"
+        elif last is None:
+            state = "Never checked"
+        elif last["outcome"] == "failed":
+            state = "Failed"
+        elif now - datetime.fromisoformat(last["finished_at"]) > STALE_AFTER:
+            state = "Stale"
+        else:
+            state = "Healthy"
+        out.append({"source": s, "last": last, "last_ok": last_ok["finished_at"] if last_ok else None, "state": state})
+    return out
+
+
+def alert_rows(db, org_id, where="", params=()):
+    return db.execute(
+        "SELECT a.*, f.title, r.score, r.match_state, COALESCE(r.override_priority, r.priority) AS priority,"
+        " u.display_name AS assignee FROM alerts a JOIN findings f ON f.id=a.finding_id"
+        " JOIN relevance r ON r.org_id=a.org_id AND r.finding_id=a.finding_id"
+        " LEFT JOIN users u ON u.id=a.assignee_id WHERE a.org_id=? " + where + " ORDER BY a.created_at DESC, a.id DESC",
+        (org_id,) + tuple(params)).fetchall()
+
+
+@bp.route("/")
+@org_required
+def dashboard():
+    db = get_db()
+    oid = g.org["id"]
+    alerts = alert_rows(db, oid)
+    counts = {
+        "new-alerts": sum(1 for a in alerts if a["status"] == "new"),
+        "requires-action": sum(1 for a in alerts if (a["status"] == "new" and a["unread"]) or
+                               (a["assignee_id"] and a["status"] in ("under_investigation", "mitigation_in_progress"))),
+        "high-priority": sum(1 for a in alerts if a["priority"] in ("P1", "P2") and a["status"] not in CLOSED),
+        "open-alerts": sum(1 for a in alerts if a["status"] not in CLOSED),
+    }
+    events = db.execute("SELECT * FROM audit_events WHERE org_id=? ORDER BY id DESC LIMIT 8", (oid,)).fetchall()
+    health = source_health(db, oid, datetime.fromisoformat(now_iso()))
+    return render_template("dashboard.html", alerts=alerts[:6], counts=counts, events=events, health=health)
+
+
+# ---------------------------------------------------------------- organization
+@bp.route("/organization")
+@org_required
+def organization():
+    db = get_db()
+    oid = g.org["id"]
+    inventory = db.execute("SELECT * FROM inventory_items WHERE org_id=? ORDER BY id", (oid,)).fetchall()
+    members = db.execute("SELECT u.id, u.display_name, u.title, m.role, m.status FROM memberships m"
+                         " JOIN users u ON u.id=m.user_id WHERE m.org_id=? ORDER BY m.role, u.id", (oid,)).fetchall()
+    assessments = db.execute(
+        "SELECT s.*, u.display_name AS respondent FROM assessments s LEFT JOIN users u ON u.id=s.respondent_id"
+        " WHERE s.org_id=? ORDER BY s.id DESC", (oid,)).fetchall()
+    answers = {s["id"]: db.execute("SELECT a.answer, q.text, q.framework_ref, q.framework_url FROM answers a"
+                                   " JOIN questions q ON q.key=a.question_key WHERE a.assessment_id=?",
+                                   (s["id"],)).fetchall() for s in assessments}
+    return render_template("organization.html", inventory=inventory, members=members, assessments=assessments,
+                           answers=answers)
+
+
+@bp.post("/members/<int:user_id>/revoke")
+@role_required("admin")
+def revoke_member(user_id):
+    db = get_db()
+    m = db.execute("SELECT * FROM memberships WHERE org_id=? AND user_id=?", (g.org["id"], user_id)).fetchone()
+    if m is None:
+        abort(404)
+    if user_id == g.user["id"]:
+        abort(400, description="You cannot revoke your own access.")
+    db.execute("UPDATE memberships SET status='revoked' WHERE id=?", (m["id"],))
+    audit(db, org_id=g.org["id"], actor_id=g.user["id"], actor_label=actor_label(), action="membership.revoked",
+          target_type="membership", target_id=m["id"], summary="Revoked member access",
+          before={"status": m["status"]}, after={"status": "revoked"})
+    commit()
+    flash("Access revoked. The member can no longer open this organization's records.")
+    return redirect(url_for("main.organization"))
+
+
+# ---------------------------------------------------------------- sources
+@bp.route("/sources")
+@org_required
+def sources():
+    db = get_db()
+    health = source_health(db, g.org["id"], datetime.fromisoformat(now_iso()))
+    runs = db.execute("SELECT r.*, c.name FROM collection_runs r JOIN source_catalog c ON c.id=r.source_id"
+                      " JOIN org_sources os ON os.source_id=c.id AND os.org_id=?"
+                      " ORDER BY r.id DESC LIMIT 12", (g.org["id"],)).fetchall()
+    return render_template("sources.html", health=health, runs=runs)
+
+
+@bp.post("/sources/<int:source_id>/toggle")
+@role_required("admin")
+def toggle_source(source_id):
+    db = get_db()
+    row = db.execute("SELECT os.enabled, c.name FROM org_sources os JOIN source_catalog c ON c.id=os.source_id"
+                     " WHERE os.org_id=? AND os.source_id=?", (g.org["id"], source_id)).fetchone()
+    if row is None:
+        abort(404)
+    new = 0 if row["enabled"] else 1
+    db.execute("UPDATE org_sources SET enabled=? WHERE org_id=? AND source_id=?", (new, g.org["id"], source_id))
+    audit(db, org_id=g.org["id"], actor_id=g.user["id"], actor_label=actor_label(), action="source.toggled",
+          target_type="source", target_id=source_id, summary=f"{row['name']} {'enabled' if new else 'disabled'}",
+          before={"enabled": bool(row["enabled"])}, after={"enabled": bool(new)})
+    commit()
+    return redirect(url_for("main.sources"))
+
+
+@bp.post("/sources/<int:source_id>/simulate-failure")
+@role_required("admin")
+def simulate_failure(source_id):
+    db = get_db()
+    src = db.execute("SELECT * FROM source_catalog WHERE id=?", (source_id,)).fetchone()
+    if src is None:
+        abort(404)
+    new = 0 if src["simulate_failure"] else 1
+    db.execute("UPDATE source_catalog SET simulate_failure=? WHERE id=?", (new, source_id))
+    audit(db, org_id=g.org["id"], actor_id=g.user["id"], actor_label=actor_label(), action="source.simulation",
+          target_type="source", target_id=source_id,
+          summary=f"Demo simulation: {src['name']} outage {'on' if new else 'off'}")
+    commit()
+    return redirect(url_for("main.sources"))
+
+
+@bp.post("/sources/refresh")
+@role_required("admin")
+def refresh_sources():
+    db = get_db()
+    touched = run_collection(db, trigger="manual", actor_label=actor_label())
+    process_findings(db, touched)
+    audit(db, org_id=g.org["id"], actor_id=g.user["id"], actor_label=actor_label(), action="collection.manual_refresh",
+          target_type="collection", target_id=None, summary=f"Manual refresh; {len(touched)} finding(s) new or updated")
+    commit()
+    flash(f"Refresh complete: {len(touched)} finding(s) new or updated. See per-source outcomes below.")
+    return redirect(url_for("main.sources"))
+
+
+# ---------------------------------------------------------------- alerts
+@bp.route("/alerts")
+@org_required
+def alerts():
+    clauses, params = [], []
+    f = request.args
+    if f.get("priority"):
+        clauses.append("AND COALESCE(r.override_priority, r.priority)=?")
+        params.append(f["priority"])
+    if f.get("status"):
+        clauses.append("AND a.status=?")
+        params.append(f["status"])
+    if f.get("category"):
+        clauses.append("AND a.category=?")
+        params.append(f["category"])
+    if f.get("since"):
+        clauses.append("AND a.created_at>=?")
+        params.append(f["since"])
+    if f.get("unread"):
+        clauses.append("AND a.unread=1")
+    rows = alert_rows(get_db(), g.org["id"], " ".join(clauses), params)
+    return render_template("alerts.html", alerts=rows, filters=f)
+
+
+@bp.route("/alerts/<int:alert_id>")
+@org_required
+def alert_detail(alert_id):
+    db = get_db()
+    alert = org_alert_or_404(alert_id)
+    if alert["unread"]:
+        db.execute("UPDATE alerts SET unread=0 WHERE id=?", (alert_id,))
+        commit()
+    finding = db.execute("SELECT * FROM findings WHERE id=?", (alert["finding_id"],)).fetchone()
+    items = db.execute("SELECT * FROM source_items WHERE finding_id=? ORDER BY id", (finding["id"],)).fetchall()
+    rel = db.execute("SELECT * FROM relevance WHERE org_id=? AND finding_id=?", (g.org["id"], finding["id"])).fetchone()
+    analysis_row = db.execute("SELECT * FROM analyses WHERE org_id=? AND finding_id=? ORDER BY id DESC LIMIT 1",
+                              (g.org["id"], finding["id"])).fetchone()
+    analysis = json.loads(analysis_row["payload"]) if analysis_row else None
+    members = db.execute("SELECT u.id, u.display_name, m.role FROM memberships m JOIN users u ON u.id=m.user_id"
+                         " WHERE m.org_id=? AND m.status='active' ORDER BY u.id", (g.org["id"],)).fetchall()
+    revisions = db.execute("SELECT * FROM finding_revisions WHERE finding_id=? ORDER BY version DESC",
+                           (finding["id"],)).fetchall()
+    history = db.execute("SELECT * FROM audit_events WHERE org_id=? AND target_type='alert' AND target_id=?"
+                         " ORDER BY id DESC", (g.org["id"], alert_id)).fetchall()
+    cite = {i["id"]: n for n, i in enumerate(items, start=1)}
+    return render_template("alert.html", alert=alert, finding=finding, items=items, rel=rel, analysis=analysis,
+                           analysis_row=analysis_row, members=members, revisions=revisions, history=history,
+                           cite=cite, next_states=ALERT_TRANSITIONS.get(alert["status"], []),
+                           note_required=NOTE_REQUIRED)
+
+
+@bp.post("/alerts/<int:alert_id>/assign")
+@role_required("admin", "lead")
+def assign_alert(alert_id):
+    db = get_db()
+    alert = org_alert_or_404(alert_id)
+    assignee = request.form.get("assignee_id", type=int)
+    member = db.execute("SELECT u.display_name FROM memberships m JOIN users u ON u.id=m.user_id"
+                        " WHERE m.org_id=? AND m.user_id=? AND m.status='active'", (g.org["id"], assignee)).fetchone()
+    if member is None:
+        abort(400, description="Assignee must be an active member of this organization.")
+    db.execute("UPDATE alerts SET assignee_id=?, updated_at=? WHERE id=?", (assignee, now_iso(), alert_id))
+    audit(db, org_id=g.org["id"], actor_id=g.user["id"], actor_label=actor_label(), action="alert.assigned",
+          target_type="alert", target_id=alert_id, summary=f"Assigned to {member['display_name']}",
+          before={"assignee_id": alert["assignee_id"]}, after={"assignee_id": assignee})
+    commit()
+    return redirect(url_for("main.alert_detail", alert_id=alert_id))
+
+
+@bp.post("/alerts/<int:alert_id>/status")
+@role_required("admin", "lead")
+def change_status(alert_id):
+    db = get_db()
+    alert = org_alert_or_404(alert_id)
+    new, note = request.form.get("status", ""), request.form.get("note", "").strip()
+    try:
+        check_transition(alert["status"], new, note)
+    except TransitionError as exc:
+        abort(400, description=str(exc))
+    db.execute("UPDATE alerts SET status=?, has_update=0, updated_at=? WHERE id=?", (new, now_iso(), alert_id))
+    summary = f"{ALERT_STATUSES[alert['status']]} → {ALERT_STATUSES[new]}" + (f". Note: {note}" if note else "")
+    audit(db, org_id=g.org["id"], actor_id=g.user["id"], actor_label=actor_label(), action="alert.status_changed",
+          target_type="alert", target_id=alert_id, summary=summary,
+          before={"status": alert["status"]}, after={"status": new})
+    commit()
+    return redirect(url_for("main.alert_detail", alert_id=alert_id))
+
+
+@bp.post("/alerts/<int:alert_id>/grouping/<int:item_id>/<action>")
+@role_required("admin", "lead")
+def grouping(alert_id, item_id, action):
+    db = get_db()
+    alert = org_alert_or_404(alert_id)
+    item = db.execute("SELECT * FROM source_items WHERE id=? AND finding_id=? AND group_status IN ('proposed','confirmed')",
+                      (item_id, alert["finding_id"])).fetchone()
+    if item is None or action not in ("confirm", "undo"):
+        abort(404)
+    if action == "confirm":
+        db.execute("UPDATE source_items SET group_status='confirmed', group_basis=? WHERE id=?",
+                   (f"{item['group_basis']} — confirmed by {g.user['display_name']}", item_id))
+        bump_revision(db, alert["finding_id"], f"Grouping of {item['source_label']} confirmed", actor_label())
+        touched = {alert["finding_id"]}
+    else:
+        ts = now_iso()
+        new_fid = db.execute(
+            "INSERT INTO findings (title, technique, event_type, technique_tags, industries, identifiers,"
+            " first_seen_at, updated_at) SELECT ?, technique, event_type, technique_tags, industries, ?, ?, ?"
+            " FROM findings WHERE id=?", (item["title"], item["identifiers"], ts, ts, alert["finding_id"])).lastrowid
+        db.execute("UPDATE source_items SET finding_id=?, group_status='primary', group_basis=? WHERE id=?",
+                   (new_fid, f"Split from finding #{alert['finding_id']} by {g.user['display_name']}", item_id))
+        snapshot_revision(db, new_fid, 1, "Finding created by undoing a proposed grouping", actor_label())
+        bump_revision(db, alert["finding_id"], f"Grouping of {item['source_label']} undone", actor_label())
+        touched = {alert["finding_id"], new_fid}
+    audit(db, org_id=g.org["id"], actor_id=g.user["id"], actor_label=actor_label(),
+          action=f"grouping.{'confirmed' if action == 'confirm' else 'undone'}", target_type="alert",
+          target_id=alert_id, summary=f"{item['source_label']} grouping {'confirmed' if action == 'confirm' else 'undone'}")
+    process_findings(db, touched, actor_label())
+    commit()
+    return redirect(url_for("main.alert_detail", alert_id=alert_id))
+
+
+# ---------------------------------------------------------------- audit / demo
+@bp.route("/audit")
+@org_required
+def audit_log():
+    events = get_db().execute("SELECT * FROM audit_events WHERE org_id=? ORDER BY id DESC LIMIT 200",
+                              (g.org["id"],)).fetchall()
+    return render_template("audit.html", events=events)
+
+
+@bp.post("/demo/reset")
+@role_required("admin")
+def demo_reset():
+    reset_demo(get_db())
+    session.clear()
+    flash("Demo reset: all seeded and entered records were deleted and the seed state restored. Sign in again.")
+    return redirect(url_for("main.login"))

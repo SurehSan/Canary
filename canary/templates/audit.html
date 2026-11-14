@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Audit history{% endblock %}
+{% block content %}
+<h1>Audit history</h1>
+<p class="muted">Application history for {{ g.org.name }} only. Demo log; not a tamper-proof audit system. Secrets are never recorded.</p>
+<section class="card">
+  <div class="table-wrap"><table class="tbl">
+    <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Target</th><th>Summary</th></tr></thead>
+    <tbody>
+    {% for e in events %}
+      <tr><td class="small">{{ e.created_at }}</td><td>{{ e.actor_label }}</td><td><code>{{ e.action }}</code></td>
+        <td class="small">{{ e.target_type }}{% if e.target_id %} #{{ e.target_id }}{% endif %}</td>
+        <td>{{ e.summary }}{% if e.before_state %}<div class="small muted">Before {{ e.before_state }} → After {{ e.after_state }}</div>{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+{% endblock %}
