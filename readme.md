@@ -142,7 +142,7 @@ Confirmed match to a Critical asset. Seeded Fernwood result:
 recency term drops by 1 once the newest source is more than 180 days old,
 after 2027-01-04, which still leaves P2).
 
-## Walkthrough so far (slices 1–2)
+## Walkthrough (slices 1–3)
 
 1. Sign in as `wyatt`. The dashboard shows the **Demo data** banner and 0 alerts.
 2. **Organization**: profile, inventory (runtime agent version **Unknown**),
@@ -171,11 +171,31 @@ after 2027-01-04, which still leaves P2).
    and the next cycle sends an **Update** email. Confirming a grouping changes
    nothing material, so it is **Suppressed**.
 10. On the alert, **Override** to P3 with a reason. The computed and override
-    values both stay visible, and the update goes to the daily digest.
+    values both stay visible, and the update goes to the daily digest. (Skip
+    this during the main walkthrough.)
+11. As `sureh`, on the alert: **Get a step-by-step guide**. Five ordered steps
+    appear, each with why it matters, checks, technique, basis, and links. One
+    targeted question follows (production install permission). Answer
+    **Unknown** and step 4 stays conditional. Mark step 1 in progress, or edit
+    a step (edits are audited with before/after).
+12. **Create contingency plan from this guide**: "Malicious dependency via AI
+    agent" with Detection, Containment, Recovery, and Review (no forced
+    Preparation stage). Koewen owns the runtime-permission check. Press
+    **Submit for review**; Sureh cannot approve. Sign in as `wyatt`, tick the
+    confirmation, and **Approve**. Editing an approved plan returns it to
+    Draft and keeps the approved version.
+13. Close out as `sureh`: Mitigation in progress → Resolved and verified (with
+    a verification note). **Questionnaire**: save a new assessment with
+    **Yes** for dependency review; the original **No** stays in history.
+    **Audit** shows every step.
+14. Footer: **Reset demo data** restores the seed state.
+
+The automated version of this walkthrough is
+[tests/test_e2e_fernwood.py](tests/test_e2e_fernwood.py).
 
 ## Requirement coverage status
 
-| Req | Status after slice 2 |
+| Req | Status after slice 3 |
 |---|---|
 | 001 | Demo accounts, roles, org selection, server-side role checks, revocation. **Pending:** create org, simulated invite, role change |
 | 002 | Profile and inventory with Unknown values (read-only). **Pending:** edit forms |
@@ -185,10 +205,11 @@ after 2027-01-04, which still leaves P2).
 | 007 | Match states, full rubric, P1 gate, factor display, reviewer override with reason |
 | 008 | List, filters, unread, assignment, all statuses with transition rules and note requirement, update indicator |
 | 009 | Allowlist-before-send, routing by category/member, P1 immediate / P2 cycle / P3–P4 digest, suppression, updates, failure + retry, delivery log, test labels. **Unverified:** real inbox delivery (no SMTP account) |
-| 010 | Seeded questions and assessment history (read-only). **Pending:** new assessment form |
-| 011 / 012 | **Pending** (guide, plan, approval) |
-| 013 | Dashboard counts from records, source health (Failed/Stale/Never checked). **Pending:** open plans, guide steps |
-| 014 | Audit events for login, membership, sources, collection, alerts, grouping, overrides, notifications |
+| 010 | OWASP LLM 2025 mapped questions with help text, Yes/No/Partial/Unknown/N/A, append-only assessments, explained threat weighting (answers never rewritten), reassessment rescoring |
+| 011 | Guide from alert (no questionnaire needed), 5 ordered steps with rationale/checks/technique/basis/links, one targeted question with Unknown, conditional step, step status + edits audited, limited generic guide for unknown threats |
+| 012 | Plan from guide, applicable stages only, owners, review/due dates, Draft → In review → Approved (Admin only, explicit confirmation) → Archived, approved version preserved on edit, version history |
+| 013 | Dashboard counts from records (incl. open plans, plans awaiting approval, waiting guide questions), source health |
+| 014 | Audit events for login, membership, sources, collection, alerts, grouping, overrides, notifications, guide answers/progress/edits, plan lifecycle, questionnaire |
 | 015 | Org scoping, 404 on cross-org access, local-only binding, reset, secrets env-only. **Pending:** data-flow disclosure page |
 | 016 | Demo banner, fictional labels, source notes, reset, simulation labels |
 

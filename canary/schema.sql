@@ -6,6 +6,12 @@
 PRAGMA foreign_keys = ON;
 
 DROP TABLE IF EXISTS audit_events;
+DROP TABLE IF EXISTS plan_versions;
+DROP TABLE IF EXISTS plan_actions;
+DROP TABLE IF EXISTS plans;
+DROP TABLE IF EXISTS guide_questions;
+DROP TABLE IF EXISTS guide_steps;
+DROP TABLE IF EXISTS guides;
 DROP TABLE IF EXISTS notifications;
 DROP TABLE IF EXISTS notification_rules;
 DROP TABLE IF EXISTS notification_recipients;
@@ -280,4 +286,87 @@ CREATE TABLE notifications (
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     sent_at TEXT
+);
+
+-- CAN-REQ-011 guides
+CREATE TABLE guides (
+    id INTEGER PRIMARY KEY,
+    org_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    alert_id INTEGER NOT NULL UNIQUE REFERENCES alerts(id) ON DELETE CASCADE,
+    label TEXT NOT NULL,
+    technique TEXT,
+    created_by INTEGER REFERENCES users(id),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE guide_steps (
+    id INTEGER PRIMARY KEY,
+    guide_id INTEGER NOT NULL REFERENCES guides(id) ON DELETE CASCADE,
+    position INTEGER NOT NULL,
+    action TEXT NOT NULL,
+    rationale TEXT NOT NULL,
+    checks TEXT NOT NULL,
+    technique TEXT NOT NULL,
+    basis TEXT NOT NULL,
+    links TEXT NOT NULL DEFAULT '[]',
+    condition TEXT,
+    condition_status TEXT CHECK (condition_status IN ('pending', 'met', 'not_met')),
+    condition_note TEXT,
+    status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'in_progress', 'done', 'deferred')),
+    edited INTEGER NOT NULL DEFAULT 0,
+    updated_at TEXT NOT NULL,
+    UNIQUE (guide_id, position)
+);
+
+CREATE TABLE guide_questions (
+    id INTEGER PRIMARY KEY,
+    guide_id INTEGER NOT NULL REFERENCES guides(id) ON DELETE CASCADE,
+    key TEXT NOT NULL,
+    step_position INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    why TEXT NOT NULL,
+    options TEXT NOT NULL,
+    answer TEXT,
+    answered_by INTEGER REFERENCES users(id),
+    answered_at TEXT
+);
+
+-- CAN-REQ-012 contingency plans
+CREATE TABLE plans (
+    id INTEGER PRIMARY KEY,
+    org_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    alert_id INTEGER REFERENCES alerts(id) ON DELETE SET NULL,
+    guide_id INTEGER REFERENCES guides(id) ON DELETE SET NULL,
+    title TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'in_review', 'approved', 'archived')),
+    version INTEGER NOT NULL DEFAULT 1,
+    approved_version INTEGER,
+    review_date TEXT,
+    created_by INTEGER REFERENCES users(id),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE plan_actions (
+    id INTEGER PRIMARY KEY,
+    plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+    stage TEXT NOT NULL CHECK (stage IN ('Preparation', 'Detection', 'Containment', 'Recovery', 'Review')),
+    position INTEGER NOT NULL,
+    action TEXT NOT NULL,
+    owner_id INTEGER REFERENCES users(id),
+    status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'done')),
+    due_date TEXT
+);
+
+CREATE TABLE plan_versions (
+    id INTEGER PRIMARY KEY,
+    plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+    version INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    snapshot TEXT NOT NULL,
+    actor_id INTEGER REFERENCES users(id),
+    actor_label TEXT NOT NULL,
+    note TEXT,
+    created_at TEXT NOT NULL
 );

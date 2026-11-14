@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Plans{% endblock %}
+{% block content %}
+<h1>Contingency plans</h1>
+<p class="muted">Plans start as drafts, go to review, and only an Administrator can approve them. Approval records a human decision; Canary does not execute any plan action.</p>
+<section class="card">
+  {% for p in plans %}
+  <a class="alert-row" href="{{ url_for('main.plan_detail', plan_id=p.id) }}">
+    <span class="plan-status {{ p.status }}">{{ PLAN_STATUSES[p.status] }}</span>
+    <span class="grow">{{ p.title }}<br><span class="muted small">v{{ p.version }}{% if p.approved_version %} · approved v{{ p.approved_version }}{% endif %} · by {{ p.author }} · review date {{ p.review_date or 'not set' }}</span></span>
+  </a>
+  {% else %}<p class="muted">No plans yet. Create one from an alert's guide.</p>{% endfor %}
+</section>
+{% endblock %}
