@@ -63,7 +63,8 @@
   <div class="row-between"><h2>Recently collected items</h2>
     {% if g.role == 'admin' %}
     <form method="post" action="{{ url_for('main.followup_evidence') }}">
-      <button class="btn small" {{ 'disabled' if followup_done }}>Demo step: deliver later follow-up report (Xygeni)</button></form>
+      <button class="btn small" {{ 'disabled' if followup_done or not followup_ready }}>Demo step: deliver later follow-up report (Xygeni)</button></form>
+    {% if not followup_ready and not followup_done %}<span class="small muted">Refresh sources first: this step adds evidence to the HalluSquatting finding.</span>{% endif %}
     {% endif %}</div>
   <p class="small muted">Stored per item: link, title, publication date when supplied, retrieval time, and a short excerpt. Full articles are not stored.
     Collected evidence is shared: the follow-up demo step attaches a report to the shared finding, which affects every organization that receives that finding.</p>
