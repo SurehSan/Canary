@@ -10,25 +10,41 @@
 
 ## 1. Product overview
 
-Canary is an AI-powered risk intelligence and contingency-planning
-platform designed to help organizations identify, understand, and
-prepare for emerging threats.
+Canary is an AI-specific security alert system and plan generator. It
+tracks new vulnerabilities and exploits affecting AI tools, models, and
+LLM-powered applications, tells an organization which ones affect its
+projects, and walks the team through fixing them.
 
-Organizations cannot predict or prepare in advance for every possible
-event. New technologies, changing attack methods, unexpected failures,
-and events at other organizations can create risks that were not
-previously considered. Advances in AI may accelerate how quickly these
-risks emerge and evolve.
+### The problem
 
-Canary helps close that preparedness gap by continuously gathering
-information from reliable external sources, identifying threats that may
-be relevant to a particular organization, explaining why they matter,
-and helping the organization develop a plan of action.
+AI tools ship faster than teams can secure them. In 2026, a single
+GitHub issue title was enough to compromise a popular AI coding tool,
+and IBM's 2026 *Cost of a Data Breach* report found unapproved
+("shadow") AI involved in 43% of the breaches it studied, up from 20% a
+year earlier. Small teams, and many larger organizations, have no one
+whose job is to track this.
+
+> **To verify before presenting:** confirm the IBM 43% figure and its
+> exact wording (share of breaches vs. share of breached organizations)
+> in the primary IBM report, and find a primary source for the GitHub
+> issue-title incident.
+
+### What makes Canary different
+
+-   **Curated intake:** a trusted-source list the customer sets by its
+    priorities, plus AI filtering and ranking.
+-   **Persistent context:** remembers the customer's AI stack, team, and
+    past assessments, so alerts are specific to them.
+-   **Framework-anchored questionnaire:** maps gaps to a standard (NIST
+    AI RMF / OWASP Top 10 for LLM Applications), reweighted by current
+    threats.
+-   **Guided report:** prioritized mitigations with a short explanation
+    of each risk, so the team learns as it fixes.
 
 ### The three core responsibilities
 
-1.  **Monitor** --- Find new vulnerabilities, incidents, advisories, and
-    industry developments.
+1.  **Monitor** --- Find new AI-related vulnerabilities, exploits,
+    incidents, and advisories.
 2.  **Inform** --- Explain what was discovered, why it may matter to the
     company, and what evidence supports the finding.
 3.  **Prepare** --- Help the company create, review, and maintain
@@ -36,9 +52,8 @@ and helping the organization develop a plan of action.
 
 ### Product goal
 
-Help organizations become more resilient by identifying emerging
-threats, educating decision-makers, and preparing actionable contingency
-plans before unexpected events become major problems.
+Help teams that build with or adopt AI tools catch emerging AI threats
+early, understand them, and fix them, before they become breaches.
 
 ------------------------------------------------------------------------
 
@@ -56,7 +71,25 @@ affect it.
 
 ------------------------------------------------------------------------
 
-## 3. Example customer: a hospital
+## 3. Target customers
+
+Canary serves two kinds of customer:
+
+-   **Small software teams** building with AI (coding assistants, LLM
+    APIs, agents, RAG pipelines) that have no dedicated security person.
+-   **Larger organizations adopting AI tools**, such as the fictional
+    hospital below, where AI is spreading across departments faster than
+    security can review it.
+
+### Example: a small team
+
+A fictional five-person startup builds a customer-support chatbot on an
+LLM API, uses an AI coding assistant, and runs an open-source agent
+framework. Canary records that stack, alerts the team when a
+vulnerability affects one of those components, and walks the team
+through the fix.
+
+### Example: a hospital
 
 Imagine a fictional hospital called **Prairie Valley Medical Center**
 purchases Canary.
@@ -69,49 +102,40 @@ Possible company profile information includes:
 -   Organization name and industry.
 -   Organization size and locations, if relevant.
 -   Areas the organization wants to monitor.
--   Software, hardware, and equipment inventory, where authorized.
--   Suppliers and important operational dependencies, where authorized.
+-   AI stack inventory: models, LLM APIs, AI-enabled products, agents,
+    coding assistants, and AI libraries, where authorized.
+-   AI vendors and the data each one can access, where authorized.
 -   Existing security policies and contingency plans, if the company
     chooses to provide them.
 -   Employees or teams responsible for different types of alerts.
 
 The hospital might select these monitoring areas:
 
--   Cybersecurity.
--   Electronic patient records.
--   Medical equipment and device safety.
--   Hospital infrastructure.
--   Supply chain and critical vendors.
+-   AI clinical documentation (ambient scribe) tools.
+-   AI features inside the electronic patient record system.
+-   Patient-facing chatbots.
+-   Shadow AI: unapproved AI tools used by staff.
 
-The purpose is to make alerts relevant. A hospital should not receive
-every alert that Canary discovers. It should receive information that is
-relevant to healthcare organizations and, where the hospital has
-supplied an inventory, potentially relevant to its own systems and
-operations.
+The purpose is to make alerts relevant. A customer should not receive
+every AI alert Canary discovers. It should receive the ones that match
+its AI stack and priorities.
 
-### Example industry relevance
+### Example AI risk areas by customer
 
   -----------------------------------------------------------------------
-  Organization type                   Example areas to monitor
+  Customer                            Example AI risks to monitor
   ----------------------------------- -----------------------------------
-  Hospital                            Patient-record software
-                                      vulnerabilities, ransomware,
-                                      medical device recalls, supply
-                                      disruptions
+  Small software team                 Prompt injection, vulnerable AI
+                                      coding tools and agent frameworks,
+                                      leaked API keys, malicious model
+                                      or package uploads
 
-  Nuclear power plant                 Industrial control system
-                                      vulnerabilities, infrastructure
-                                      threats, safety advisories
+  Hospital                            Patient data leaking through AI
+                                      tools, vulnerable AI scribe or EHR
+                                      AI features, shadow AI use
 
-  Bank                                Financial fraud, data breaches,
-                                      banking system vulnerabilities
-
-  Manufacturer                        Industrial equipment failures,
-                                      supply chain disruption,
-                                      operational technology security
-
-  Technology company                  Software vulnerabilities, cloud
-                                      security, data breaches
+  Bank                                LLM chatbot data leakage, AI-driven
+                                      fraud, model supply-chain risk
   -----------------------------------------------------------------------
 
 ------------------------------------------------------------------------
@@ -279,10 +303,11 @@ When Canary discovers a potentially important threat, it should help the
 company understand what happened, why it matters, and what actions may
 be appropriate.
 
-### Hospital example: a vulnerability affecting electronic patient records
+### Hospital example: a vulnerability in an AI tool connected to patient records
 
-**Scenario:** Canary discovers a new security advisory for a software
-product used by healthcare organizations.
+**Scenario:** Canary discovers a new security advisory (for example, a
+prompt-injection flaw) for an AI documentation assistant that
+integrates with electronic patient records.
 
 #### Step 1 --- Collect the information
 
@@ -322,9 +347,13 @@ The alert should clearly explain:
 -   **What to do next:** Verify product versions and follow the vendor's
     recommended guidance.
 
-#### Step 4 --- Generate a proposed contingency plan
+#### Step 4 --- Generate a guided report and contingency plan
 
-The user selects **Create Plan**. Canary drafts a plan such as:
+The user selects **Create Plan**. Canary drafts a **guided report**:
+prioritized mitigations, each paired with a short plain-language
+explanation of the risk it addresses, so the team learns as it fixes.
+For larger organizations, the report expands into a staged contingency
+plan such as:
 
 **Plan: Electronic Medical Record System Compromise**
 
@@ -377,20 +406,22 @@ Canary's monitoring system can be understood as three stages.
 
 ### Stage 1 --- Information collection
 
-Collect information from permitted, reliable sources, such as:
+Collect information from a **trusted-source list that each customer
+sets by its priorities**. Canary provides a recommended default list;
+customers can add, remove, or reweight sources.
 
-**Cybersecurity** - CISA advisories and the Known Exploited
-Vulnerabilities Catalog. - NIST National Vulnerability Database. -
-Vendor security advisories. - Relevant government cybersecurity
-advisories. - Trusted cybersecurity research organizations.
+**AI vulnerabilities and exploits** - NIST National Vulnerability
+Database and CISA Known Exploited Vulnerabilities Catalog (filtered to
+AI products and libraries). - GitHub Security Advisories for AI
+packages. - AI vendor security advisories (model providers, AI coding
+tools, agent frameworks). - OWASP GenAI Security Project. - MITRE ATLAS.
 
-**Healthcare and safety** - HHS cybersecurity and healthcare guidance. -
-FDA medical device safety communications and recalls. - Manufacturer
-notices. - Relevant public health and infrastructure advisories.
+**AI incidents and research** - AI Incident Database. - Trusted
+security research organizations and AI-security researchers. - Public
+incident reports and post-incident analyses. - Reputable news sources.
 
-**Industry and organizational events** - Reputable news sources. -
-Public incident reports. - Industry publications. - Research reports and
-post-incident analyses.
+**Sector guidance (where relevant)** - HHS and FDA guidance on AI in
+healthcare. - Government AI security advisories.
 
 ### Stage 2 --- AI analysis and filtering
 
@@ -430,6 +461,26 @@ Store factual findings, metadata, and source links where possible
 instead of copying entire articles. Do not bypass paywalls,
 authentication, or technical access controls. Keep source attribution
 and publication dates.
+
+------------------------------------------------------------------------
+
+## 7a. Framework-anchored security questionnaire
+
+During onboarding, and again periodically, Canary asks the team a short
+questionnaire about how it builds and uses AI. Examples: Do you validate
+LLM output before it reaches other systems? Who can install AI tools?
+Are API keys rotated?
+
+-   Questions map to a standard: the **NIST AI Risk Management
+    Framework** and the **OWASP Top 10 for LLM Applications**.
+-   Question weights are **reweighted by current threats**: if Canary
+    is seeing a wave of prompt-injection exploits, related gaps rise in
+    priority.
+-   Answers are saved as part of the customer's persistent context, so
+    future alerts and reports account for known gaps and past
+    assessments.
+-   Results feed the guided report: each gap becomes a prioritized
+    mitigation with a short explanation.
 
 ------------------------------------------------------------------------
 
@@ -538,12 +589,16 @@ attempting to become a complete enterprise security platform.
         inventory.
     -   Filter irrelevant information.
     -   Prioritize findings for review.
-5.  **Contingency plan generation**
+5.  **Security questionnaire**
+    -   Ask framework-mapped questions (NIST AI RMF / OWASP LLM Top 10).
+    -   Weight gaps by current threats.
+    -   Save answers as persistent context.
+6.  **Guided report and contingency plan generation**
     -   Let users select a finding or enter a scenario.
     -   Generate a proposed plan.
     -   Allow editing and approval.
     -   Save plans for future reference.
-6.  **Notification system**
+7.  **Notification system**
     -   Send email notifications.
     -   Implement priority-based alerts.
     -   Provide daily or weekly summaries.
@@ -557,9 +612,9 @@ Demonstrate this sequence:
 
 1.  The hospital creates a Canary account and selects healthcare as its
     industry.
-2.  The hospital selects cybersecurity and patient-record systems as
-    monitoring interests.
-3.  Canary retrieves a sample or real public security advisory.
+2.  The hospital records its AI stack (for example, an AI scribe tool)
+    and completes the security questionnaire.
+3.  Canary retrieves a sample or real public AI security advisory.
 4.  The AI summarizes the advisory and explains why it may matter to the
     hospital.
 5.  The hospital receives an alert with a priority and source links.
@@ -618,12 +673,12 @@ an existing alert or plan and explain what changed.
 
 ## 12. Product summary
 
-**Canary is an AI-powered risk intelligence and contingency-planning
-platform.**
+**Canary is an AI-specific security alert system and plan generator.**
 
-It monitors external information, identifies emerging threats relevant
-to a particular organization, explains why those threats matter, and
-helps the organization prepare an actionable response.
+It tracks new AI vulnerabilities and exploits from sources the customer
+trusts, tells the team which ones affect its projects, maps its gaps to
+NIST AI RMF and the OWASP LLM Top 10, and walks the team through fixing
+them with a guided report.
 
 Its purpose is not to claim that every crisis can be predicted. Its
 purpose is to help organizations recognize warning signs, learn from
