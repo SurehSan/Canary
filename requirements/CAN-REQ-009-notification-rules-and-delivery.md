@@ -34,3 +34,10 @@ CAN-REQ-001, CAN-REQ-008.
 - Route by category to configured Administrator/Cybersecurity Lead recipients. Defaults: P1 immediate, P2 prompt in the next local processing cycle, P3/P4 in a daily digest. Provide a manual “process digest” action and record attempted/sent/failed/suppressed outcomes.
 - Suppress unchanged repeats; send an update when priority, affected products, exploitation status, or source evidence materially changes. Demonstrate a simulated delivery failure and retry once; clearly distinguish simulation from actual SMTP delivery status.
 - Reject all non-allowlisted recipients, including when configuration is missing or malformed. Never fall back silently to a mock inbox or claim delivery on failure. Show failure and retry controls to the Administrator. No production-send toggle is exposed.
+
+## Amendment 2026-11-14: presentation mode
+With `CANARY_PRESENTATION_MODE=1`, the subject tag is `[Canary · Test]`, and in place of the header block the body
+ends with a one-line notice: the message is a test notification from a sample workspace and is not evidence of an
+actual incident. Every message is still labeled as a test. The allowlist, the rejection of all other recipients,
+and the failure reporting are unchanged. The default (off) keeps the `[CANARY DEMO - TEST]` prefix and the full
+test-mode notice.

@@ -38,7 +38,7 @@
 <section class="card">
   <h2>Assessment history</h2>
   {% for s in assessments %}
-    <h3>{{ s.created_at }} · {{ s.respondent or 'Unknown respondent' }}{% if s.is_demo %} <span class="tag">Fictional demo context</span>{% endif %}</h3>
+    <h3>{{ s.created_at }} · {{ s.respondent or 'Unknown respondent' }}{% if s.is_demo and not presentation %} <span class="tag">Fictional demo context</span>{% endif %}</h3>
     {% if s.note %}<p class="small muted">{{ s.note }}</p>{% endif %}
     <ul class="plain">{% for q in questions if answers[s.id].get(q.key) %}
       <li><strong>{{ answers[s.id][q.key] }}</strong> — {{ q.text }} <span class="small muted">{{ q.framework_ref }}</span></li>

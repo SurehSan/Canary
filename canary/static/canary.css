@@ -171,3 +171,9 @@ details.fix[open] { display: block; background: var(--surface-2); padding: .45re
   .alert-head { flex-direction: column; gap: .4rem; }
   .hero img { width: 128px; height: 128px; }
 }
+
+/* --- Presentation mode ------------------------------------------------------------------------- */
+.sample-chip { font-size: .72rem; font-weight: 700; color: var(--topbar-muted); border: 1px solid rgba(255, 255, 255, .18);
+  padding: .1rem .5rem; border-radius: 999px; cursor: help; }
+details.presenter { border-style: dashed; }
+details.presenter summary { color: var(--heading); }

@@ -1,11 +1,18 @@
 {% extends "base.html" %}
 {% block title %}Notifications{% endblock %}
 {% block content %}
+{% if presentation %}
+<h1>Notifications</h1>
+<div class="notice">Email delivery is restricted to approved addresses. Any other recipient is rejected before a
+  connection is made, and a message that can't be delivered stays <strong>Blocked</strong>, <strong>Rejected</strong>,
+  or <strong>Failed</strong>. It is never reported as sent.</div>
+{% else %}
 <h1>Notifications <span class="tag sim">Test mode</span></h1>
 <div class="notice">Test mode only: there is no production mode. Every subject starts with <code>{{ SUBJECT_PREFIX }}</code>
   and every body carries a test-mode notice. Only addresses on the local allowlist can receive email; any other
   recipient is rejected before an SMTP connection is made. If sending is impossible or fails, the message stays
   <strong>Blocked</strong>, <strong>Rejected</strong>, or <strong>Failed</strong>. There is no mock inbox.</div>
+{% endif %}
 
 <div class="grid-2">
   <section class="card">
@@ -16,13 +23,13 @@
       <dt>Allowlist</dt><dd>{% if allowlist %}{{ allowlist|join(', ') }}{% else %}<span class="state failed">Empty — every recipient is rejected</span>{% endif %}
         <div class="small muted">{{ allowlist|length }} allowed for this organization. Manage it in <a href="#allowlist">Allowlist</a> below.</div></dd>
       <dt>Cadence</dt><dd>P1 immediate · P2 next local processing cycle (every minute while running, or “Run processing cycle”) · P3/P4 daily digest. Collection cadence is separate (hourly).</dd>
-      <dt>Failure simulation</dt><dd>{% if simulate %}<span class="tag sim">ON — sends fail without contacting SMTP</span>{% else %}Off{% endif %}</dd>
+      {% if not presentation or simulate %}<dt>Failure simulation</dt><dd>{% if simulate %}<span class="tag sim">ON — sends fail without contacting SMTP</span>{% else %}Off{% endif %}</dd>{% endif %}
     </dl>
     {% if g.role == 'admin' %}
     <div class="actions">
       <form method="post" action="{{ url_for('main.process_notifications') }}"><button class="btn primary small">Run processing cycle (P1/P2)</button></form>
       <form method="post" action="{{ url_for('main.run_digest') }}"><button class="btn small">Process daily digest (P3/P4)</button></form>
-      <form method="post" action="{{ url_for('main.toggle_delivery_failure') }}"><button class="btn small ghost">{{ 'End simulated failure' if simulate else 'Simulate delivery failure' }}</button></form>
+      {% if not presentation %}<form method="post" action="{{ url_for('main.toggle_delivery_failure') }}"><button class="btn small ghost">{{ 'End simulated failure' if simulate else 'Simulate delivery failure' }}</button></form>{% endif %}
     </div>
     <form method="post" action="{{ url_for('main.test_notification') }}" class="inline-form" style="margin-top:.8rem">
       <input name="email" type="email" placeholder="address for a delivery check" required>
@@ -34,9 +41,9 @@
 
   <section class="card">
     <h2>Recipients and routing</h2>
-    <p class="small muted">Fictional people are mapped to team-owned test addresses. A member receives an alert only when a routing rule names them.</p>
+    <p class="small muted">{{ 'Each member can have one notification address.' if presentation else 'Fictional people are mapped to team-owned test addresses.' }} A member receives an alert only when a routing rule names them.</p>
     <table class="tbl">
-      <thead><tr><th>Member</th><th>Test address</th><th>Allowlist</th></tr></thead>
+      <thead><tr><th>Member</th><th>{{ 'Notification address' if presentation else 'Test address' }}</th><th>Allowlist</th></tr></thead>
       <tbody>{% for m in members %}
         <tr><td>{{ m.display_name }}<div class="small muted">{{ ROLE_LABELS[m.role] }}</div></td>
           <td>{% if g.role == 'admin' %}
@@ -117,4 +124,14 @@
     </tbody>
   </table></div>
 </section>
+
+{% if presentation and g.role == 'admin' %}
+<details class="card presenter">
+  <summary><strong>Presenter tools</strong> <span class="small muted">(visible to Administrators only)</span></summary>
+  <p class="small muted">Scripted events for the walkthrough. Changes are recorded in the audit history.</p>
+  <form method="post" action="{{ url_for('main.toggle_delivery_failure') }}">
+    <button class="btn small ghost">{{ 'End simulated failure' if simulate else 'Simulate delivery failure' }}</button></form>
+  <p class="small muted">While on, sends are recorded as Failed (Simulated) without contacting the mail server; turn it off and use Retry.</p>
+</details>
+{% endif %}
 {% endblock %}

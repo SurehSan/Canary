@@ -28,3 +28,15 @@ CAN-REQ-001 through CAN-REQ-015.
 - Provide a visible “Demo data” banner and distinguish simulated/sample records from collected source records. Provide a full reset to restore the seeded state and remove user changes.
 - Demonstrate all CAN-REQ-001–015 in the walkthrough or through an adjacent screen/state: accounts and roles, organization/inventory, source settings and status, collection, normalization/evidence/deduplication, analysis, relevance/priority, alert triage, mock notification, questionnaire, guide, human-approved plan, dashboard, audit history, and privacy/data safeguards.
 - Do not present the IBM 43% or GitHub issue-title examples as verified until checked against primary sources. Their omission does not block the hallusquatting prototype.
+
+## Amendment 2026-11-14: presentation mode
+At the team's request, an opt-in `CANARY_PRESENTATION_MODE=1` setting gives the web app a product-like look for
+live presentations. With it on:
+- The demo banner and the "fictional" and "Demo data" tags are hidden.
+- A subtle "Sample workspace" marker stays in the header.
+- Scripted events move to an Administrator-only "Presenter tools" panel.
+
+Truthfulness text stays in both modes: "AI-generated draft for human review", "a score is triage, not proof of
+exposure", "approval executes nothing", and "Simulated" markers on presenter-triggered failures. The default
+(off) keeps every label this requirement specifies. When presentation mode is used, the presenter states once,
+out loud, that the workspace and people are fictional (see documents/demo-script.md).

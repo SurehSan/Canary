@@ -7,7 +7,7 @@
   {% for o in orgs %}
   <form method="post" action="{{ url_for('main.select_org') }}" class="row-between org-pick">
     <input type="hidden" name="org_id" value="{{ o.id }}">
-    <div><strong>{{ o.name }}</strong> <span class="tag">Demo data</span><br>
+    <div><strong>{{ o.name }}</strong> {% if not presentation %}<span class="tag">Demo data</span>{% endif %}<br>
       <span class="muted">{{ o.industry }} · {{ ROLE_LABELS[o.role] }}</span></div>
     <button class="btn">Open</button>
   </form>

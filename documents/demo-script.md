@@ -11,9 +11,14 @@ exposed or compromised.
 ## Before the demo (10 minutes ahead)
 
 1. In the project folder, confirm that `.env` has the Gmail sender settings and
-   App Password, and that `CANARY_SCHEDULER=0` is set. With the scheduler off,
-   email goes out only when you click **Run processing cycle**, so you control
-   the timing.
+   App Password, and that `CANARY_SCHEDULER=0` and `CANARY_PRESENTATION_MODE=1`
+   are set. With the scheduler off, email goes out only when you click **Run
+   processing cycle**, so you control the timing. Presentation mode makes the app
+   look like a real product: there's no demo banner or "fictional" tags, the
+   sign-in page doesn't list the test accounts (they're below, and every password
+   is `demo`), and the scripted events (outages, the follow-up report, delivery
+   failure) are in a collapsed **Presenter tools** panel at the bottom of Sources
+   and Notifications, visible to Administrators only.
 2. Run `python run.py --reset`, then `python run.py`. Leave the terminal open.
 3. Open **three browser windows**:
    - **Window A** (normal): http://127.0.0.1:5000, signed in as `wyatt` (password `demo`).
@@ -37,7 +42,7 @@ exposed or compromised.
 | 1:30 | A | **Alerts** → open the HalluSquatting alert | "Two real reports, from The Hacker News and a CSA research note, are grouped into one finding with both links and dates. The grouping is *proposed*: a person confirms it." |
 | 2:00 | A | Scroll to **Why this may matter** and **Analysis** | "**Possible match**, 65 out of 100, **P2 High**. Every point is explained. It is **not P1**, because P1 needs active exploitation *and* a confirmed match to a critical asset. The analysis keeps source facts, our context, unknowns, and Canary's interpretation separate, and it flags that the two sources disagree about real-world exploitation. A score is triage, not proof of exposure." |
 | 3:15 | A | **Notifications** → **Run processing cycle** | "The P2 alert goes to Sureh's test inbox. All email is labeled as a test, and only allowlisted team addresses can receive it." |
-| 3:30 | C | Refresh the inbox and open the email | "Here it is in a real inbox: `[CANARY DEMO - TEST]`, priority, why it matters, what's known and unknown, and the sources. It says plainly that it's a demo, not evidence of an incident." |
+| 3:30 | C | Refresh the inbox and open the email | "Here it is in a real inbox, tagged `[Canary · Test]`: priority, why it matters, what's known and unknown, and the sources. The footer says it comes from a sample workspace and isn't evidence of an incident." |
 | 4:00 | A | **Send delivery check** to `someone@example.com` | "An address that isn't on the allowlist is **Rejected** before anything is sent." |
 | 4:15 | B | Open the alert → **Assign** to Sureh → **Under investigation** | "Sureh picks it up. Every change is attributed and time-stamped." |
 | 4:45 | B | **Get a step-by-step guide** | "There's no questionnaire to fill in first. Five ordered steps, each with why it matters, what to check, and links. It asks **one** targeted question…" |
@@ -49,8 +54,8 @@ exposed or compromised.
 
 ## Extras if there's time
 
-- **Updated evidence** (Window A, 30s): Sources → **Demo step: deliver later
-  follow-up report (Xygeni)** → Notifications → **Run processing cycle**. A
+- **Updated evidence** (Window A, 30s): Sources → **Presenter tools** → **Deliver
+  later follow-up report (Xygeni)** → Notifications → **Run processing cycle**. A
   third source is attached, the alert shows "Updated evidence", and an
   **Update** email arrives.
 - **Human correction** (Window B, 30s): on the alert, **Correct** an
@@ -58,7 +63,7 @@ exposed or compromised.
   original text is kept in the history.
 - **Organization isolation** (30s): sign in as `priya` (Prairie Valley Medical
   Center) and paste the Fernwood alert's URL. The response is **Not found**.
-- **Honest failures** (30s): Notifications → **Simulate delivery failure** →
+- **Honest failures** (30s): Notifications → **Presenter tools** → **Simulate delivery failure** →
   **Send delivery check** to the DSU address. It shows **Failed (Simulated)**,
   and nothing reaches the mail server. Turn the switch off, press **Retry**, and
   it shows **Sent**.

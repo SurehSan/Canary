@@ -15,7 +15,7 @@
   <label>Vendor data-access notes (optional; only if you are authorized to share) <input name="data_access_notes" value="{{ i.data_access_notes or '' if i else '' }}"></label>
 {%- endmacro %}
 {% block content %}
-<h1>{{ g.org.name }} {% if g.org.is_demo %}<span class="tag">Demo data</span>{% endif %}</h1>
+<h1>{{ g.org.name }} {% if g.org.is_demo and not presentation %}<span class="tag">Demo data</span>{% endif %}</h1>
 
 <section class="card">
   <h2>Profile</h2>
@@ -47,7 +47,7 @@
     <thead><tr><th>Item</th><th>Category</th><th>Version</th><th>Criticality</th><th>Owner</th><th>Notes</th></tr></thead>
     <tbody>
     {% for i in inventory %}
-      <tr><td><strong>{{ i.name }}</strong>{% if i.is_demo %} <span class="tag">Fictional</span>{% endif %}
+      <tr><td><strong>{{ i.name }}</strong>{% if i.is_demo and not presentation %} <span class="tag">Fictional</span>{% endif %}
           {% if g.role in ('admin', 'lead') %}
           <details><summary class="small">Edit</summary>
             <form method="post" action="{{ url_for('main.edit_inventory', item_id=i.id) }}" class="inv-form">{{ inv_fields(i) }}<button class="btn small">Save</button></form>
@@ -69,7 +69,7 @@
 
 <section class="card" id="members">
   <h2>Members</h2>
-  <p class="muted small">Invitations are simulated: an Administrator adds an existing local account and no email is sent.</p>
+  <p class="muted small">{{ 'An Administrator adds an existing account; no invitation email is sent.' if presentation else 'Invitations are simulated: an Administrator adds an existing local account and no email is sent.' }}</p>
   <table class="tbl">
     <thead><tr><th>Name</th><th>Role</th><th>Status</th><th></th></tr></thead>
     <tbody>
@@ -92,7 +92,7 @@
   <form method="post" action="{{ url_for('main.invite_member') }}" class="inline-form" style="margin-top:.7rem">
     <input name="username" placeholder="existing username" required>
     <select name="role"><option value="lead">Cybersecurity Lead</option><option value="admin">Administrator</option></select>
-    <button class="btn small">Invite (simulated)</button>
+    <button class="btn small">{{ 'Invite' if presentation else 'Invite (simulated)' }}</button>
   </form>
   {% endif %}
 </section>
@@ -101,7 +101,7 @@
   <h2>Security questionnaire history</h2>
   <p class="muted small">OWASP Top 10 for LLM Applications (2025) mapping. New assessments never overwrite earlier ones. <a href="{{ url_for('main.questionnaire') }}">Open questionnaire →</a></p>
   {% for s in assessments %}
-    <h3>{{ s.created_at }} · {{ s.respondent or 'Unknown respondent' }} {% if s.is_demo %}<span class="tag">Fictional demo context</span>{% endif %}</h3>
+    <h3>{{ s.created_at }} · {{ s.respondent or 'Unknown respondent' }} {% if s.is_demo and not presentation %}<span class="tag">Fictional demo context</span>{% endif %}</h3>
     <ul class="plain">{% for a in answers[s.id] %}
       <li><strong>{{ a.answer }}</strong> — {{ a.text }} <a href="{{ a.framework_url }}" target="_blank" rel="noopener">{{ a.framework_ref }}</a></li>
     {% endfor %}</ul>

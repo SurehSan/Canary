@@ -36,6 +36,8 @@ def create_app(config=None):
         TEST_RECIPIENTS=parse_recipients(os.environ.get("CANARY_TEST_RECIPIENTS")),
         APP_BASE_URL=os.environ.get("CANARY_BASE_URL") or "http://127.0.0.1:5000",
         LIVE_SOURCES=os.environ.get("CANARY_LIVE_SOURCES", "0") == "1",
+        # Presentation mode: product-like UI (no demo banner/tags); emails keep a clean "[Canary · Test]" tag.
+        PRESENTATION_MODE=os.environ.get("CANARY_PRESENTATION_MODE", "0") == "1",
         LIVE_MIN_INTERVAL_SECONDS=900,
         HTTP_GET=None,
     )
