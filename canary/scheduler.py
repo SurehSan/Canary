@@ -11,11 +11,12 @@ import time
 def run_cycle(conn, collect, digest, actor_label="System scheduler"):
     from .collector import run_collection
     from .delivery import process_digest, process_queue
-    from .pipeline import process_findings
+    from .pipeline import assess_backlog, process_findings
     touched = set()
     if collect:
         touched = run_collection(conn, trigger="scheduled", actor_label=f"{actor_label} (hourly)")
         process_findings(conn, touched)
+        assess_backlog(conn, f"{actor_label} (hourly)")
     sent = process_queue(conn, actor_label=f"{actor_label} (processing cycle)")
     digests = process_digest(conn) if digest else []
     conn.commit()

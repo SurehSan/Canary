@@ -31,6 +31,32 @@ def inventory_for(conn, org_id):
             conn.execute("SELECT * FROM inventory_items WHERE org_id=?", (org_id,))]
 
 
+AVAILABLE = ("SELECT DISTINCT os.org_id, si.finding_id FROM source_items si"
+             " JOIN org_sources os ON os.source_id = si.source_id"
+             " WHERE os.enabled = 1 AND os.simulate_failure = 0 AND si.finding_id IS NOT NULL")
+
+
+def assess_org(conn, org_id, actor_label="System pipeline"):
+    """(Re)assess every finding available to an organization: anything its enabled sources have already
+    collected, plus findings it was assessed for before (CDX-3: orgs created after collection)."""
+    fids = {r["finding_id"] for r in conn.execute(AVAILABLE + " AND os.org_id = ?", (org_id,))}
+    fids |= {r["finding_id"] for r in conn.execute("SELECT finding_id FROM relevance WHERE org_id=?", (org_id,))}
+    for fid in sorted(fids):
+        assess_for_org(conn, fid, org_id, actor_label)
+
+
+def assess_backlog(conn, actor_label="System pipeline"):
+    """Assess (org, finding) pairs that are available but were never assessed, e.g. for an organization
+    created or a source enabled after the finding was collected. Re-collection skips known items, so
+    without this such organizations would never see existing findings (CDX-3)."""
+    pairs = conn.execute(AVAILABLE + " AND NOT EXISTS (SELECT 1 FROM relevance r"
+                         " WHERE r.org_id = os.org_id AND r.finding_id = si.finding_id)"
+                         " ORDER BY si.finding_id, os.org_id").fetchall()
+    for p in pairs:
+        assess_for_org(conn, p["finding_id"], p["org_id"], actor_label)
+    return len(pairs)
+
+
 def process_findings(conn, finding_ids, actor_label="System pipeline"):
     for fid in sorted(finding_ids):
         for org_id in orgs_for_finding(conn, fid):

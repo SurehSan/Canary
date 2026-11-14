@@ -13,7 +13,7 @@ from .delivery import (SIMULATE_KEY, dispatch, enqueue_for_alert, get_setting, p
 from .fixtures import FOLLOWUP_ITEMS
 from .live import LIVE_FEEDS
 from .notify import SUBJECT_PREFIX, check_recipient
-from .pipeline import process_findings
+from .pipeline import assess_backlog, assess_org, process_findings
 from .scoring import MATCH_LABELS, PRIORITY_LABELS
 from .seed import reset_demo
 from .workflow import ALERT_STATUSES, ALERT_TRANSITIONS, NOTE_REQUIRED, TransitionError, check_transition
@@ -231,6 +231,8 @@ def toggle_source(source_id):
     audit(db, org_id=g.org["id"], actor_id=g.user["id"], actor_label=actor_label(), action="source.toggled",
           target_type="source", target_id=source_id, summary=f"{row['name']} {'enabled' if new else 'disabled'}",
           before={"enabled": bool(row["enabled"])}, after={"enabled": bool(new)})
+    if new:
+        assess_org(db, g.org["id"], actor_label())
     commit()
     return redirect(url_for("main.sources"))
 
@@ -259,6 +261,7 @@ def refresh_sources():
     db = get_db()
     touched = run_collection(db, trigger="manual", actor_label=actor_label())
     process_findings(db, touched)
+    assess_backlog(db, actor_label())
     audit(db, org_id=g.org["id"], actor_id=g.user["id"], actor_label=actor_label(), action="collection.manual_refresh",
           target_type="collection", target_id=None, summary=f"Manual refresh; {len(touched)} finding(s) new or updated")
     commit()
