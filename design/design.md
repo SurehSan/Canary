@@ -4,6 +4,8 @@
 
 The design target is a **locally run demo prototype**, not a hosted MVP or production service. The prototype must represent all requirements CAN-REQ-001 through CAN-REQ-016 in an end-to-end, reviewable workflow. A requirement may be represented by a working local feature, a clearly labeled simulation, or a documented boundary where production operation is intentionally out of scope. Do not imply that a simulated control provides production security, delivery, compliance, or reliability.
 
+**Schedule:** the prototype must be completed in one day. Optimize for a reliable end-to-end demo rather than production readiness. The coding agent may select the application stack and database/schema; choose the simplest maintainable option that runs locally, record the decision and rationale, and proceed without waiting for a separate approval. Prefer existing tools and minimal dependencies. Use deterministic seeded behavior or clear simulations when live integrations threaten the schedule, except that the configured, team-owned test email path must send a real test email.
+
 The default demo organization is fictional **Fernwood Labs**, following the hallusquatting flow. **Prairie Valley Medical Center** remains an optional fictional sample organization. Demo data and simulated events are visibly labeled and separated from externally sourced findings. The walkthrough uses the hallusquatting finding with source links and dates; any simulated details are marked as such.
 
 ## Design areas and requirement traceability
@@ -21,7 +23,7 @@ The default demo organization is fictional **Fernwood Labs**, following the hall
 
 ## Prototype decisions
 
-- **Runtime:** one developer machine; local application and local persistent database. No public deployment, production email mode, SSO, or customer integrations. The prototype sends real test emails only to explicitly allowlisted, team-owned addresses.
+- **Runtime:** one developer machine; local application and local persistent database. The coding agent chooses the stack, database, and schema for fastest reliable local delivery and records them in the implementation README. No public deployment, production email mode, SSO, or customer integrations. The prototype sends real test emails only to explicitly allowlisted, team-owned addresses.
 - **Identity:** local demo accounts, with Administrator and Cybersecurity Lead roles only. Organization selection scopes every read and write. Seed two Cybersecurity Leads to demonstrate delegation. Invites are simulated; no external invitation email is sent.
 - **Organization and inventory:** manual entry only. Organization name and industry are required; size, location, monitoring interests, inventory version, owner, criticality, and data-access notes are optional and may be unknown. No import/export or integrations in the prototype.
 - **Sources and collection:** ship a fixed, documented starter catalog (The Hacker News, CSA research notes, GitHub Security Advisories, and OWASP GenAI, as used by the demo flow). Admins can enable/disable catalog sources and monitoring areas, but cannot add arbitrary URLs. Prefer permitted RSS/API/public access. Provide a manual refresh and a local hourly schedule; surface last check and errors. No real-time guarantee.
@@ -37,12 +39,11 @@ The default demo organization is fictional **Fernwood Labs**, following the hall
 
 ## Suggested design sequence
 
-1. Agree on the local runtime, data model, organization scoping, and secret/data boundaries.
-2. Define the role matrix, workflow states, source catalog, and collection/deduplication behavior.
-3. Specify the matching and priority rubric and validate it against the hallusquatting flow.
-4. Design the questionnaire, guide, plan, dashboard, and mock notification screens.
-5. Map each acceptance criterion in CAN-REQ-001 through CAN-REQ-016 to a visible screen, stored record, or explicitly labeled simulation.
+1. Agent selects and records the local stack, database/schema, and startup/reset approach; establish organization scoping and secret/data boundaries.
+2. Build the seeded end-to-end Fernwood workflow first, including the allowlisted real test email path.
+3. Represent remaining requirements through working local features or clearly labeled simulations, following the role matrix, workflow states, source catalog, questionnaire, priority rubric, guides, and plans below.
+4. Map each acceptance criterion in CAN-REQ-001 through CAN-REQ-016 to a visible screen, stored record, or explicitly labeled simulation. Keep scope small enough to complete and rehearse within one day.
 
 ## Completion check
 
-The design is ready for prototype implementation when each requirement has (a) a named design decision, (b) a corresponding screen, data record, or simulated behavior, and (c) a walkthrough step that demonstrates it. Record intentional production exclusions as prototype boundaries, not unresolved decisions. Validate the end-to-end flow in [the Fernwood hallusquatting demo](../documents/hallusquatting-demo-flow.md). The requirements index is [here](../requirements/README.md).
+The design is ready for prototype implementation when each requirement has (a) a named design decision, (b) a corresponding screen, data record, or simulated behavior, and (c) a walkthrough step that demonstrates it. For the one-day build, the coding agent owns stack and schema selection and records those decisions in the implementation README. Record intentional production exclusions as prototype boundaries, not unresolved decisions. Validate the end-to-end flow in [the Fernwood hallusquatting demo](../documents/hallusquatting-demo-flow.md). The requirements index is [here](../requirements/README.md).

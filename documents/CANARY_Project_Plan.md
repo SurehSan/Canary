@@ -6,9 +6,11 @@
 **Status:** Working concept; current deliverable is a local demo prototype\
 **Example customer:** Prairie Valley Medical Center (fictional)
 
-**Current prototype direction:** Build a locally run demo that represents all
-16 requirements in `requirements/`, using working local features or clearly
-labeled simulations. This is not a hosted MVP or production service. Fernwood
+**Current prototype direction:** Build a locally run demo in one day that
+represents all 16 requirements in `requirements/`, using working local
+features or clearly labeled simulations. The coding agent may choose and
+document the simplest suitable local technology stack and database/schema.
+This is not a hosted MVP or production service. Fernwood
 Labs is the primary fictional organization for the hallusquatting walkthrough;
 Prairie Valley Medical Center remains an optional fictional example. Prototype
 defaults and production limitations are defined in `design/README.md` and in

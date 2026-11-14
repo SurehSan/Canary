@@ -6,7 +6,7 @@ This folder turns the working concept in `sureh.md` and `CANARY_Project_Plan.md`
 
 Represent every requirement CAN-REQ-001 through CAN-REQ-016 in the local prototype, using a working feature or clearly labeled simulation where external/production behavior is out of scope. Each document defines one capability, purpose, requirements, acceptance criteria, dependencies, and prototype design decisions. Acceptance criteria are intended to be verifiable; the specific implementation stack remains a design choice.
 
-The project plan is a working concept. Prototype defaults are selected to make the design implementable and are not claims about a future hosted product. The target is local execution only, with fictional/sample data and visible demo labels. See [the design overview](../design/README.md) for scope, traceability, and the combined design choices. Do not treat prototype simulations as production security, delivery, reliability, or compliance controls.
+The project plan is a working concept. Prototype defaults are selected to make the design implementable and are not claims about a future hosted product. The target is local execution only, with fictional/sample data and visible demo labels, and the one-day schedule favors a complete demo flow over production readiness. The coding agent may choose the simplest suitable local stack and database/schema, documenting its choices before implementation. See [the design overview](../design/design.md) for scope, traceability, and the combined design choices. Do not treat prototype simulations as production security, delivery, reliability, or compliance controls.
 
 ## Requirement index
 

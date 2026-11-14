@@ -15,9 +15,9 @@ was installed.
 
 | Prototype role | Person (fictional) | Demo responsibility |
 |---|---|---|
-| Administrator | Maya, CTO | Workspace and source settings; plan approval |
-| Cybersecurity Lead | Dev, backend engineer | Initial investigation and guide |
-| Cybersecurity Lead | Alex, platform engineer | Independent inventory/runtime-permission check |
+| Administrator | Wyatt, CTO | Workspace and source settings; plan approval |
+| Cybersecurity Lead 1 | Sureh, backend engineer | Initial investigation and guide |
+| Cybersecurity Lead 2 | Koewen, platform engineer | Independent inventory/runtime-permission check |
 
 Real notification messages go only to the team's preconfigured, team-owned
 test email addresses. Those addresses are mapped to the fictional recipients
@@ -34,7 +34,7 @@ email accounts.
 - Confirm test mode is active. Every email must be addressed only to an
   allowlisted test inbox and include **[CANARY DEMO - TEST]** in the subject
   and a test-mode label in the body. There is no production-send switch.
-- Seed two Cybersecurity Leads, Dev and Alex, and one Administrator, Maya.
+- Seed two Cybersecurity Leads, Sureh and Koewen, and one Administrator, Wyatt.
   The invitations are simulated; no invite email is sent.
 - Seed inventory: AI coding assistant with auto-install on (High criticality);
   Python runtime agent framework with version Unknown (Critical); LLM API
@@ -51,14 +51,14 @@ email accounts.
 
 ### 1. Organization and role setup — CAN-REQ-001, 002
 
-Maya opens Fernwood's workspace and reviews its profile and AI inventory.
+Wyatt opens Fernwood's workspace and reviews its profile and AI inventory.
 Show the two Cybersecurity Leads, role-specific actions, and that the inventory
 version is explicitly Unknown. The other seeded organization, if shown, cannot
 read Fernwood's records.
 
 ### 2. Source configuration and collection — CAN-REQ-003, 004
 
-Maya opens source settings and shows enabled sources, last-check status, and
+Wyatt opens source settings and shows enabled sources, last-check status, and
 the separate collection and notification cadences. Trigger a local refresh.
 The collector records retrieval outcome, original URL, available publication
 date, and retrieval time. If a source fails, show it as a failure, not an
@@ -119,7 +119,7 @@ recommendation, not proof of exposure.
 ### 6. Real test email — CAN-REQ-009
 
 Route the cybersecurity-category P2 notification to the configured test
-recipient for Dev. The app records the attempt and outcome. Show the message in
+recipient for Sureh. The app records the attempt and outcome. Show the message in
 the team's real inbox, including:
 
 - Subject prefixed with **[CANARY DEMO - TEST]**.
@@ -136,14 +136,14 @@ is rejected before sending.
 
 ### 7. Alert investigation and dashboard — CAN-REQ-008, 013
 
-Dev opens the new alert from the dashboard, reviews evidence and uncertainty,
+Sureh opens the new alert from the dashboard, reviews evidence and uncertainty,
 self-assigns it, and moves it to **Under investigation**. Show the dashboard
-count updating from saved records and the source health/status. Alex is
+count updating from saved records and the source health/status. Koewen is
 assigned the parallel check of runtime-agent permissions.
 
 ### 8. Targeted guide — CAN-REQ-011
 
-Dev requests a guide directly from the alert; no general questionnaire is
+Sureh requests a guide directly from the alert; no general questionnaire is
 required first. The draft guide contains ordered steps, rationale, checks,
 techniques, and source links:
 
@@ -164,13 +164,13 @@ The guide asks one targeted clarification:
 > production? (Yes / No / Unknown). This determines whether step 4 is an
 > immediate action or a precaution to evaluate.
 
-Dev answers **Unknown**. Step 4 remains conditional until Alex completes the
-check. The guide is labeled **AI-generated draft for human review**. Dev marks
+Sureh answers **Unknown**. Step 4 remains conditional until Koewen completes the
+check. The guide is labeled **AI-generated draft for human review**. Sureh marks
 progress and records the answer.
 
 ### 9. Human-reviewed contingency plan — CAN-REQ-012
 
-Dev converts the guide into **“Malicious dependency via AI agent.”** Use only
+Sureh converts the guide into **“Malicious dependency via AI agent.”** Use only
 applicable stages:
 
 - **Detection:** review lockfiles and package installation history.
@@ -180,15 +180,15 @@ applicable stages:
   if exposure is indicated.
 - **Review:** add or update the LLM03 dependency-review control.
 
-Dev owns technical investigation and mitigation; Alex owns the runtime
-permission check; Maya reviews and approves. The plan moves from **Draft** to
-**In review**. Maya, as Administrator, approves it. Show the approval event and
+Sureh owns technical investigation and mitigation; Koewen owns the runtime
+permission check; Wyatt reviews and approves. The plan moves from **Draft** to
+**In review**. Wyatt, as Administrator, approves it. Show the approval event and
 preserved plan version in the audit history. Approval does not execute any
 action on Ledgerly.
 
 ### 10. Audit history and close-out — CAN-REQ-008, 010, 014
 
-Alex confirms the runtime agent cannot install packages in production. Dev
+Koewen confirms the runtime agent cannot install packages in production. Sureh
 finds no suspicious package in the reviewed lockfiles. The team disables
 auto-install for the coding assistant and verifies the setting. The alert
 moves through **Mitigation in progress** to **Resolved and verified**, with a
