@@ -25,6 +25,7 @@ def make_app(tmp_path, smtp, **overrides):
         "SMTP_HOST": "127.0.0.1", "SMTP_PORT": smtp.port, "SMTP_STARTTLS": False, "SMTP_SSL": False,
         "SMTP_USERNAME": "canary", "SMTP_PASSWORD": PASSWORD, "MAIL_FROM": "canary-demo@team.example",
         "EMAIL_ALLOWLIST": {SUREH_ADDR, WYATT_ADDR}, "LIVE_SOURCES": False, "TEST_RECIPIENTS": {},
+        "ALLOWLIST_DOMAINS": None,
     }
     cfg.update(overrides)
     return create_app(cfg)

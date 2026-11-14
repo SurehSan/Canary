@@ -48,7 +48,7 @@ def contrast_report():
 
 
 def dotenv_report():
-    from run import load_dotenv
+    from canary.run import load_dotenv
     keys = ("CANARY_MAIL_FROM", "CANARY_SMTP_HOST")
     old = {key: os.environ.pop(key, None) for key in keys}
     try:

@@ -129,8 +129,26 @@ def safe_smtp_error(exc):
     return f"SMTP error: {type(exc).__name__}" + (f" (code {code})" if code is not None else "")
 
 
+def env_allowlist():
+    return set(current_app.config.get("EMAIL_ALLOWLIST") or set())
+
+
+def allowlist_for(conn, org_id):
+    """Effective allowlist for an organization: the .env list plus addresses its Administrators added."""
+    added = {r["email"] for r in conn.execute("SELECT email FROM email_allowlist WHERE org_id=?", (org_id,))}
+    return env_allowlist() | added
+
+
+def permitted_domains():
+    """Domains that in-app additions must use. Unset: the domains already used by the .env allowlist."""
+    configured = current_app.config.get("ALLOWLIST_DOMAINS")
+    if configured:
+        return set(configured)
+    return {a.rsplit("@", 1)[1] for a in env_allowlist() if "@" in a}
+
+
 def _precheck(conn, org_id, email):
-    reason = check_recipient(email, current_app.config.get("EMAIL_ALLOWLIST") or set())
+    reason = check_recipient(email, allowlist_for(conn, org_id))
     if reason:
         # A missing address is a configuration gap (blocked); any other address off the allowlist is rejected.
         return ("blocked" if not (email or "").strip() else "rejected"), reason, 0

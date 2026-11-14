@@ -8,12 +8,12 @@ from .analysis import apply_corrections, corrections_for
 from .auth import ROLE_LABELS, actor_label, login_required, org_required, role_required
 from .collector import FIXTURE_ADAPTER, bump_revision, ingest_item, run_collection, snapshot_revision
 from .db import audit, get_db, now_iso
-from .delivery import (SIMULATE_KEY, dispatch, enqueue_for_alert, get_setting, process_digest, process_queue,
+from .delivery import (SIMULATE_KEY, allowlist_for, dispatch, env_allowlist, permitted_domains, enqueue_for_alert, get_setting, process_digest, process_queue,
                        send_test, set_setting, smtp_status)
 from .fixtures import FOLLOWUP_ITEMS
 from .live import LIVE_FEEDS
 from .normalize import detect_technique
-from .notify import SUBJECT_PREFIX, check_recipient
+from .notify import EMAIL_RE, SUBJECT_PREFIX, check_recipient
 from .pipeline import assess_backlog, assess_org, process_findings
 from .scoring import MATCH_LABELS, PRIORITY_LABELS
 from .seed import reset_demo
@@ -486,9 +486,12 @@ def notifications():
     log = db.execute("SELECT n.*, u.display_name FROM notifications n LEFT JOIN users u ON u.id=n.user_id"
                      " WHERE n.org_id=? ORDER BY n.id DESC LIMIT 50", (oid,)).fetchall()
     smtp_ok, smtp_msg = smtp_status()
-    allow = current_app.config.get("EMAIL_ALLOWLIST") or set()
+    allow = allowlist_for(db, oid)
+    added = db.execute("SELECT a.*, u.display_name FROM email_allowlist a LEFT JOIN users u ON u.id=a.added_by"
+                       " WHERE a.org_id=? ORDER BY a.email", (oid,)).fetchall()
     return render_template("notifications.html", members=members, rules=rules, log=log, smtp_ok=smtp_ok,
                            smtp_msg=smtp_msg, allowlist=sorted(allow), allow=allow, check_recipient=check_recipient,
+                           env_list=sorted(env_allowlist()), added=added, domains=sorted(permitted_domains()),
                            simulate=get_setting(db, oid, SIMULATE_KEY) == "1", SUBJECT_PREFIX=SUBJECT_PREFIX,
                            has_password=bool(current_app.config.get("SMTP_PASSWORD")))
 
@@ -511,9 +514,52 @@ def set_recipient():
           action="notification.recipient_set", target_type="user", target_id=uid,
           summary="Test address " + ("set" if email else "removed"))
     commit()
-    problem = check_recipient(email, current_app.config.get("EMAIL_ALLOWLIST") or set()) if email else None
+    problem = check_recipient(email, allowlist_for(db, g.org["id"])) if email else None
     flash("Saved." + (f" Warning: {problem} Sends to this address will be rejected." if problem else ""))
     return redirect(url_for("main.notifications"))
+
+
+@bp.post("/notifications/allowlist")
+@role_required("admin")
+def add_allowlist():
+    """Option B: an Administrator adds a team-owned address for this organization (explicit, audited)."""
+    db = get_db()
+    email = (request.form.get("email") or "").strip().lower()
+    domains = permitted_domains()
+    if not domains:
+        abort(400, description="In-app additions are off: no allowlist or permitted domains are configured in .env.")
+    if request.form.get("confirm") != "yes":
+        abort(400, description="Confirm that this address is owned by your team.")
+    if not EMAIL_RE.match(email):
+        abort(400, description="Enter a single, valid email address.")
+    if email.rsplit("@", 1)[1] not in domains:
+        abort(400, description="Only addresses on these domains can be added here: " + ", ".join(sorted(domains)) +
+                               ". Other domains must be added to CANARY_EMAIL_ALLOWLIST or CANARY_ALLOWLIST_DOMAINS in .env.")
+    if email in allowlist_for(db, g.org["id"]):
+        abort(400, description="That address is already allowed.")
+    entry = db.execute("INSERT INTO email_allowlist (org_id, email, added_by, added_at) VALUES (?,?,?,?)",
+                       (g.org["id"], email, g.user["id"], now_iso())).lastrowid
+    audit(db, org_id=g.org["id"], actor_id=g.user["id"], actor_label=actor_label(),
+          action="notification.allowlist_added", target_type="email_allowlist", target_id=entry,
+          summary=f"Allowlisted {email} for this organization (confirmed team-owned)", after={"email": email})
+    commit()
+    flash(f"{email} can now receive test email for {g.org['name']}. Messages already Rejected stay Rejected; use Retry.")
+    return redirect(url_for("main.notifications") + "#allowlist")
+
+
+@bp.post("/notifications/allowlist/<int:entry_id>/delete")
+@role_required("admin")
+def remove_allowlist(entry_id):
+    db = get_db()
+    row = db.execute("SELECT * FROM email_allowlist WHERE id=? AND org_id=?", (entry_id, g.org["id"])).fetchone()
+    if row is None:
+        abort(404)
+    db.execute("DELETE FROM email_allowlist WHERE id=?", (entry_id,))
+    audit(db, org_id=g.org["id"], actor_id=g.user["id"], actor_label=actor_label(),
+          action="notification.allowlist_removed", target_type="email_allowlist", target_id=entry_id,
+          summary=f"Removed {row['email']} from this organization's allowlist", before={"email": row["email"]})
+    commit()
+    return redirect(url_for("main.notifications") + "#allowlist")
 
 
 @bp.post("/notifications/rules")

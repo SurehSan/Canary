@@ -6,6 +6,7 @@
 PRAGMA foreign_keys = ON;
 
 DROP TABLE IF EXISTS audit_events;
+DROP TABLE IF EXISTS email_allowlist;
 DROP TABLE IF EXISTS analysis_corrections;
 DROP TABLE IF EXISTS plan_versions;
 DROP TABLE IF EXISTS plan_actions;
@@ -384,4 +385,15 @@ CREATE TABLE analysis_corrections (
     reason TEXT NOT NULL,
     editor_id INTEGER REFERENCES users(id),
     created_at TEXT NOT NULL
+);
+
+-- Option B: team-owned addresses an Administrator added in the app, per organization. The .env
+-- allowlist (CANARY_EMAIL_ALLOWLIST) is always allowed in addition and cannot be removed in the app.
+CREATE TABLE email_allowlist (
+    id INTEGER PRIMARY KEY,
+    org_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    email TEXT NOT NULL,
+    added_by INTEGER REFERENCES users(id),
+    added_at TEXT NOT NULL,
+    UNIQUE (org_id, email)
 );
