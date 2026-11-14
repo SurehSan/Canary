@@ -2,7 +2,7 @@
 {% block title %}Audit history{% endblock %}
 {% block content %}
 <h1>Audit history</h1>
-<p class="muted">Application history for {{ g.org.name }} only. Demo log; not a tamper-proof audit system. Secrets are never recorded.</p>
+<p class="muted">Application history for {{ g.org.name }} only. {{ 'Application history; not' if presentation else 'Demo log; not' }} a tamper-proof audit system. Secrets are never recorded.</p>
 <section class="card">
   <div class="table-wrap"><table class="tbl">
     <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Target</th><th>Summary</th></tr></thead>

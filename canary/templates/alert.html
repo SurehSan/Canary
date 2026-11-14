@@ -128,7 +128,7 @@
       <p class="small muted">Exploitation evidence: {{ analysis.exploitation_reason }}{% if analysis.owasp %} · Framework: {{ analysis.owasp }}{% endif %}</p>
     </div>
   </div>
-  <p class="small muted">Analysis is generated per finding version (v{{ analysis_row.finding_version }}) from source metadata only; source text is treated as untrusted input. No API key is used in demo mode. Human corrections are shown in place and never overwrite the generated record.</p>
+  <p class="small muted">Analysis is generated per finding version (v{{ analysis_row.finding_version }}) from source metadata only; source text is treated as untrusted input.{% if not presentation %} No API key is used in demo mode.{% endif %} Human corrections are shown in place and never overwrite the generated record.</p>
   {% if corrections %}
   <h3>Correction history</h3>
   <ul class="events">{% for c in corrections|reverse %}<li><span class="muted small">{{ c.created_at }}</span> <strong>{{ c.editor }}</strong> — {{ CORRECTABLE_SECTIONS[c.section] }}: “{{ c.prior_value }}” → “{{ c.new_value }}”. Reason: {{ c.reason }}</li>{% endfor %}</ul>

@@ -7,14 +7,18 @@
   <form method="post" action="{{ url_for('main.refresh_sources') }}"><button class="btn primary">Refresh sources now</button></form>
   {% endif %}
 </div>
+{% if presentation %}
+<p class="muted">Curated catalog of approved public sources. Arbitrary URLs, authenticated, or paywalled sources cannot be added.</p>
+{% else %}
 <p class="muted">Fixed starter catalog of approved public sources. Arbitrary URLs, authenticated, or paywalled sources
   cannot be added. Every source runs the <strong>{{ FIXTURE_ADAPTER }}</strong>: real articles stored offline so the
   demo works without network access.
   {% if live_on %}<strong>Live RSS is ON</strong> for The Hacker News public feed (AI-related items only; at most one
   fetch per 15 minutes).{% else %}Live RSS is off (set <code>CANARY_LIVE_SOURCES=1</code> to also read The Hacker
   News public feed).{% endif %}</p>
+{% endif %}
 <dl class="kv">
-  <dt>Collection cadence</dt><dd>Manual refresh + local hourly schedule (demo cadence; no real-time guarantee)</dd>
+  <dt>Collection cadence</dt><dd>Manual refresh + hourly schedule ({{ 'no real-time guarantee' if presentation else 'demo cadence; no real-time guarantee' }})</dd>
   <dt>Notification cadence</dt><dd>Separate: P1 immediate, P2 next local processing cycle, P3/P4 daily digest</dd>
 </dl>
 
@@ -35,8 +39,10 @@
         <td class="actions">
           <form method="post" action="{{ url_for('main.toggle_source', source_id=h.source.id) }}">
             <button class="btn small">{{ 'Disable' if h.source.enabled else 'Enable' }}</button></form>
+          {% if not presentation %}
           <form method="post" action="{{ url_for('main.simulate_failure', source_id=h.source.id) }}">
             <button class="btn small ghost">{{ 'End simulated outage' if h.source.simulate_failure else 'Simulate outage' }}</button></form>
+          {% endif %}
         </td>{% endif %}
       </tr>
     {% endfor %}
@@ -61,20 +67,38 @@
 
 <section class="card">
   <div class="row-between"><h2>Recently collected items</h2>
-    {% if g.role == 'admin' %}
+    {% if g.role == 'admin' and not presentation %}
     <form method="post" action="{{ url_for('main.followup_evidence') }}">
       <button class="btn small" {{ 'disabled' if followup_done or not followup_ready }}>Demo step: deliver later follow-up report (Xygeni)</button></form>
     {% if not followup_ready and not followup_done %}<span class="small muted">Refresh sources first: this step adds evidence to the HalluSquatting finding.</span>{% endif %}
     {% endif %}</div>
   <p class="small muted">Stored per item: link, title, publication date when supplied, retrieval time, and a short excerpt. Full articles are not stored.
-    Collected evidence is shared: the follow-up demo step attaches a report to the shared finding, which affects every organization that receives that finding.</p>
+    {% if presentation %}Collected evidence is shared by every organization that receives the same finding.{% else %}Collected evidence is shared: the follow-up demo step attaches a report to the shared finding, which affects every organization that receives that finding.{% endif %}</p>
   <div class="table-wrap"><table class="tbl">
     <thead><tr><th>Item</th><th>Source / adapter</th><th>Published</th><th>Retrieved</th></tr></thead>
     <tbody>{% for i in items %}
       <tr><td><a href="{{ i.url }}" target="_blank" rel="noopener">{{ i.title }}</a>{% if i.excerpt %}<div class="small muted">{{ i.excerpt }}</div>{% endif %}</td>
-        <td class="small">{{ i.source_label }}<div class="muted">{{ i.adapter or 'Demo step (not collected by a catalog source)' }}</div></td>
+        <td class="small">{{ i.source_label }}<div class="muted">{{ i.adapter or ('Follow-up report (not collected by a catalog source)' if presentation else 'Demo step (not collected by a catalog source)') }}</div></td>
         <td class="small">{{ i.published_at or 'Not supplied' }}</td><td class="small">{{ i.retrieved_at }}</td></tr>
     {% else %}<tr><td colspan="4" class="muted">Nothing collected yet.</td></tr>{% endfor %}</tbody>
   </table></div>
 </section>
+
+{% if presentation and g.role == 'admin' %}
+<details class="card presenter">
+  <summary><strong>Presenter tools</strong> <span class="small muted">(visible to Administrators only)</span></summary>
+  <p class="small muted">Scripted events for the walkthrough. Changes are recorded in the audit history.</p>
+  <h3>Simulate a source outage (this organization only)</h3>
+  <div class="actions">
+    {% for h in health if h.source.enabled %}
+    <form method="post" action="{{ url_for('main.simulate_failure', source_id=h.source.id) }}">
+      <button class="btn small ghost">{{ ('End outage: ' if h.source.simulate_failure else 'Simulate outage: ') ~ h.source.name }}</button></form>
+    {% endfor %}
+  </div>
+  <h3>Follow-up evidence</h3>
+  <form method="post" action="{{ url_for('main.followup_evidence') }}">
+    <button class="btn small" {{ 'disabled' if followup_done or not followup_ready }}>Deliver later follow-up report (Xygeni)</button></form>
+  {% if not followup_ready and not followup_done %}<p class="small muted">Refresh sources first: this adds evidence to the HalluSquatting finding.</p>{% endif %}
+</details>
+{% endif %}
 {% endblock %}

@@ -2,9 +2,11 @@
 {% block title %}Create account{% endblock %}
 {% block content %}
 <section class="card narrow">
-  <h1>Create a local demo account</h1>
+  <h1>{{ 'Create an account' if presentation else 'Create a local demo account' }}</h1>
+  {% if not presentation %}
   <p class="muted">Demo authentication only: the account exists in this local database until the demo is reset. No
     email, SSO, MFA, or account recovery. Do not reuse a real password.</p>
+  {% endif %}
   <form method="post" class="stack">
     <label>Username (3–20 lowercase letters, digits, or _) <input name="username" pattern="[a-z0-9_]{3,20}" required></label>
     <label>Display name <input name="display_name" required></label>

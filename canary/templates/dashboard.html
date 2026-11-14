@@ -2,7 +2,7 @@
 {% block title %}Dashboard{% endblock %}
 {% block content %}
 <div class="row-between">
-  <h1>{{ g.org.name }} <span class="tag">Demo data</span></h1>
+  <h1>{{ g.org.name }} {% if not presentation %}<span class="tag">Demo data</span>{% endif %}</h1>
   {% if g.role == 'admin' %}
   <form method="post" action="{{ url_for('main.refresh_sources') }}"><button class="btn primary">Refresh sources now</button></form>
   {% endif %}
@@ -55,7 +55,7 @@
       {% endfor %}
       </tbody>
     </table>
-    <p class="muted small">Collection: manual refresh + local hourly schedule (demo cadence, not real time). Notification cadence is separate: P1 immediate, P2 next processing cycle, P3/P4 daily digest.</p>
+    <p class="muted small">Collection: manual refresh + local hourly schedule ({{ 'not real time' if presentation else 'demo cadence, not real time' }}). Notification cadence is separate: P1 immediate, P2 next processing cycle, P3/P4 daily digest.</p>
   </section>
 </div>
 

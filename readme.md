@@ -38,6 +38,9 @@ email:
   `CANARY_EMAIL_ALLOWLIST` and `CANARY_TEST_RECIPIENTS` (for example
   `sureh=you@school.edu`).
 - Set `CANARY_SCHEDULER=0` so email goes out only when you click.
+- Optional: `CANARY_PRESENTATION_MODE=1` for a product-like look when presenting
+  (see the environment variable table). Tell the audience once that the workspace
+  and people are fictional.
 
 Keep each setting on one line, with no comments after the value. University
 Microsoft 365 accounts can't be used as the sender because they block SMTP
@@ -111,6 +114,7 @@ Copy [.env.example](.env.example) to `.env` (git-ignored; read only by
 | `CANARY_ALLOWLIST_DOMAINS` | Comma-separated domains an Administrator may add addresses on, in **Notifications → Allowlist** (per organization, confirmation required, audited) | the domains used in `CANARY_EMAIL_ALLOWLIST`; if both are empty, in-app additions are off |
 | `CANARY_TEST_RECIPIENTS` | `user=addr,...` maps demo people to test addresses at seed/reset | none |
 | `CANARY_BASE_URL` | Link base in emails | `http://127.0.0.1:5000` |
+| `CANARY_PRESENTATION_MODE` | `1` = product-like UI for presenting: no demo banner or "fictional" tags, test accounts not listed on sign-in, scripted events moved to an Administrator-only **Presenter tools** panel; emails use a clean `[Canary · Test]` tag and a one-line sample-workspace footer. Truthfulness text (AI-generated draft, triage is not proof) stays | `0` (full demo labels, as CAN-REQ-009/016 require by default) |
 | `CANARY_LIVE_SOURCES` | `1` also reads The Hacker News public RSS (AI-related items only, ≥15 min apart) | `0` (offline fixtures only) |
 
 The SMTP password is read from the environment only. It is never stored in the
