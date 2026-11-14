@@ -107,7 +107,8 @@ Copy [.env.example](.env.example) to `.env` (git-ignored; read only by
 | `CANARY_SCHEDULER` | `1` runs the background schedule (P1/P2 queue every minute, collection hourly, digest daily) | `1` |
 | `CANARY_SMTP_HOST`, `_PORT`, `_USERNAME`, `_PASSWORD`, `_STARTTLS`, `_SSL` | SMTP provider for real test email | unset = sends are **Blocked** |
 | `CANARY_MAIL_FROM` | From address | unset = Blocked |
-| `CANARY_EMAIL_ALLOWLIST` | Comma-separated team-owned addresses; the only possible recipients | empty = **every recipient rejected** |
+| `CANARY_EMAIL_ALLOWLIST` | Comma-separated team-owned addresses, always allowed for every organization and not removable in the app | empty = **every recipient rejected** unless an Administrator adds one |
+| `CANARY_ALLOWLIST_DOMAINS` | Comma-separated domains an Administrator may add addresses on, in **Notifications → Allowlist** (per organization, confirmation required, audited) | the domains used in `CANARY_EMAIL_ALLOWLIST`; if both are empty, in-app additions are off |
 | `CANARY_TEST_RECIPIENTS` | `user=addr,...` maps demo people to test addresses at seed/reset | none |
 | `CANARY_BASE_URL` | Link base in emails | `http://127.0.0.1:5000` |
 | `CANARY_LIVE_SOURCES` | `1` also reads The Hacker News public RSS (AI-related items only, ≥15 min apart) | `0` (offline fixtures only) |
@@ -119,7 +120,9 @@ database, shown on a page, or written to the audit log (a test checks this).
 
 Each send runs these checks in order: (1) the recipient must have a test
 address, or the send is **Blocked**; (2) the address must be on the
-`CANARY_EMAIL_ALLOWLIST`, or it is **Rejected** with no SMTP connection;
+organization's allowlist (`CANARY_EMAIL_ALLOWLIST` plus any team-owned addresses
+an Administrator added under **Notifications → Allowlist** on a permitted
+domain), or it is **Rejected** with no SMTP connection;
 (3) SMTP must be configured, or it is **Blocked**; (4) the "Simulate delivery
 failure" demo switch produces **Failed (simulated)** with no SMTP contact;
 (5) otherwise the app sends through SMTP and records **Sent** only if the server

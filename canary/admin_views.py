@@ -9,7 +9,7 @@ from werkzeug.security import generate_password_hash
 from .analysis import CORRECTABLE_SECTIONS, apply_corrections, corrections_for, section_texts
 from .auth import actor_label, login_required, org_required, role_required
 from .db import audit, get_db, now_iso
-from .delivery import smtp_status
+from .delivery import allowlist_for, env_allowlist, smtp_status
 from .pipeline import assess_org
 from .views import bp, commit, org_alert_or_404
 
@@ -279,7 +279,7 @@ def privacy():
     smtp_ok, smtp_msg = smtp_status()
     return render_template("privacy.html", smtp_ok=smtp_ok, smtp_msg=smtp_msg,
                            live_on=current_app.config.get("LIVE_SOURCES"),
-                           allowlist_size=len(current_app.config.get("EMAIL_ALLOWLIST") or ()))
+                           allowlist_size=len(allowlist_for(get_db(), g.org["id"]) if g.org else env_allowlist()))
 
 
 @bp.app_context_processor

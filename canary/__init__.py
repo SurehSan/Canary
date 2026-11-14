@@ -30,6 +30,9 @@ def create_app(config=None):
         SMTP_SSL=os.environ.get("CANARY_SMTP_SSL", "0") == "1",
         MAIL_FROM=os.environ.get("CANARY_MAIL_FROM") or None,
         EMAIL_ALLOWLIST=parse_allowlist(os.environ.get("CANARY_EMAIL_ALLOWLIST")),
+        # Domains Administrators may add in the app; unset = the domains of CANARY_EMAIL_ALLOWLIST.
+        ALLOWLIST_DOMAINS={d.strip().lower().lstrip("@") for d in os.environ.get("CANARY_ALLOWLIST_DOMAINS", "").split(",")
+                           if d.strip()} or None,
         TEST_RECIPIENTS=parse_recipients(os.environ.get("CANARY_TEST_RECIPIENTS")),
         APP_BASE_URL=os.environ.get("CANARY_BASE_URL") or "http://127.0.0.1:5000",
         LIVE_SOURCES=os.environ.get("CANARY_LIVE_SOURCES", "0") == "1",

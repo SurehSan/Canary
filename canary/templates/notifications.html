@@ -14,7 +14,7 @@
       <dt>SMTP</dt><dd>{% if smtp_ok %}<span class="state healthy">{{ smtp_msg }}</span>{% else %}<span class="state failed">Blocked</span> — {{ smtp_msg }}{% endif %}</dd>
       <dt>Credentials</dt><dd>{{ 'Password set in local environment (never shown)' if has_password else 'No password in environment' }}</dd>
       <dt>Allowlist</dt><dd>{% if allowlist %}{{ allowlist|join(', ') }}{% else %}<span class="state failed">Empty — every recipient is rejected</span>{% endif %}
-        <div class="small muted">Set in the local environment (<code>CANARY_EMAIL_ALLOWLIST</code>); it cannot be edited in the app.</div></dd>
+        <div class="small muted">{{ allowlist|length }} allowed for this organization. Manage it in <a href="#allowlist">Allowlist</a> below.</div></dd>
       <dt>Cadence</dt><dd>P1 immediate · P2 next local processing cycle (every minute while running, or “Run processing cycle”) · P3/P4 daily digest. Collection cadence is separate (hourly).</dd>
       <dt>Failure simulation</dt><dd>{% if simulate %}<span class="tag sim">ON — sends fail without contacting SMTP</span>{% else %}Off{% endif %}</dd>
     </dl>
@@ -62,6 +62,40 @@
     {% endif %}
   </section>
 </div>
+
+<section class="card" id="allowlist">
+  <h2>Allowlist</h2>
+  <p class="small muted">Only these addresses can receive test email for {{ g.org.name }}. Every other address is
+    <strong>Rejected</strong> before anything is sent. Addresses from local configuration are always allowed and can only be
+    changed in <code>.env</code>. Administrators can add team-owned addresses
+    {% if domains %}on <strong>{{ domains|join(', ') }}</strong>{% endif %} for this organization only; every change is audited.</p>
+  <table class="tbl">
+    <thead><tr><th>Address</th><th>Source</th><th></th></tr></thead>
+    <tbody>
+    {% for a in env_list %}
+      <tr><td>{{ a }}</td><td class="small">From local configuration (.env)</td><td></td></tr>
+    {% endfor %}
+    {% for a in added %}
+      <tr><td>{{ a.email }}</td><td class="small">Added in app by {{ a.display_name or 'unknown' }}, {{ a.added_at[:10] }}</td>
+        <td>{% if g.role == 'admin' %}<form method="post" action="{{ url_for('main.remove_allowlist', entry_id=a.id) }}"
+              onsubmit="return confirm('Remove {{ a.email }} from the allowlist? Future emails to it will be rejected.');">
+          <button class="btn small ghost">Remove</button></form>{% endif %}</td></tr>
+    {% endfor %}
+    {% if not env_list and not added %}<tr><td colspan="3"><span class="state failed">Empty — every recipient is rejected</span></td></tr>{% endif %}
+    </tbody>
+  </table>
+  {% if g.role == 'admin' %}
+    {% if domains %}
+    <form method="post" action="{{ url_for('main.add_allowlist') }}" class="inline-form" style="margin-top:.8rem">
+      <input name="email" type="email" placeholder="name@{{ domains[0] }}" required>
+      <label class="inline small"><input type="checkbox" name="confirm" value="yes" required> This address is owned by our team, and its owner agreed to receive test email</label>
+      <button class="btn small primary">Add to allowlist</button>
+    </form>
+    {% else %}
+    <p class="small"><span class="state failed">In-app additions are off</span>: set <code>CANARY_EMAIL_ALLOWLIST</code> or <code>CANARY_ALLOWLIST_DOMAINS</code> in <code>.env</code> first.</p>
+    {% endif %}
+  {% endif %}
+</section>
 
 <section class="card">
   <h2>Delivery log</h2>

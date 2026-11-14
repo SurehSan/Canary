@@ -13,7 +13,7 @@
     <tbody>
       <tr><td>Test email (SMTP)</td>
         <td>Alert title, priority, relevance, short summary, organization context lines, unknowns, and source links, sent only to allowlisted team-owned addresses with a test label.</td>
-        <td>{% if smtp_ok %}{{ smtp_msg }}; {{ allowlist_size }} allowlisted address(es){% else %}SMTP not configured: nothing is sent and sends show as Blocked{% endif %}</td></tr>
+        <td>{% if smtp_ok %}{{ smtp_msg }}; {{ allowlist_size }} allowlisted address(es) for this organization (from .env plus any an Administrator added){% else %}SMTP not configured: nothing is sent and sends show as Blocked{% endif %}</td></tr>
       <tr><td>Source collection</td>
         <td>Nothing about any organization. Only an anonymous GET of a public feed (The Hacker News RSS) when live mode is on.</td>
         <td>{% if live_on %}Live RSS is on (at most one fetch per 15 minutes){% else %}Live RSS is off: offline fixture records only, no network calls{% endif %}</td></tr>
