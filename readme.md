@@ -12,10 +12,15 @@ Planning documents: [implementation plan](documents/implementation-plan.md) ·
 
 ## Quick start
 
-Requires Python 3.12+ with Flask 3 and pytest (both ship with Anaconda). No
-other dependencies, no network access, and no API key are needed.
+Requires Python 3.12+. The app needs only Flask (pinned in
+[requirements.txt](requirements.txt)); everything else is in the standard
+library. No network access or API key is needed to run the demo. Anaconda
+already includes Flask and pytest, so you can skip the install step there.
 
 ```bash
+python -m venv .venv && .venv\Scripts\activate     # optional; macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt       # run the app
+pip install -r requirements-dev.txt   # also run tests, Codex scripts, and the logo asset script
 python run.py            # http://127.0.0.1:5000  (creates + seeds instance/canary.sqlite on first run)
 python run.py --reset    # delete ALL records and restore the seed state
 python -m pytest         # run the test suite

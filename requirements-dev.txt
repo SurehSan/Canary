@@ -1,0 +1,6 @@
+# Development and verification dependencies (includes the runtime set).
+#   pip install -r requirements-dev.txt
+-r requirements.txt
+pytest==8.3.4        # python -m pytest
+requests==2.32.3     # tests/codex/*.py HTTP walkthrough and smoke scripts
+Pillow==11.1.0       # design/make_brand_assets.py (regenerates the logo assets)

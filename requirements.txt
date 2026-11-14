@@ -1,0 +1,5 @@
+# Runtime dependencies for the Canary local demo (Python 3.12+).
+# Everything else the app uses is in the Python standard library (sqlite3, smtplib, urllib, xml, ...).
+#   pip install -r requirements.txt
+Flask==3.1.3
+Werkzeug==3.1.9
