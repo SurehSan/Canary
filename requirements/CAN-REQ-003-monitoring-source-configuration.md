@@ -26,3 +26,7 @@ CAN-REQ-001. Collection behavior is defined in CAN-REQ-004.
 - Provide a fixed starter catalog of The Hacker News, CSA research notes, GitHub Security Advisories, and OWASP GenAI, matching the demo flow. Catalog definitions are global; each organization independently enables sources and monitoring areas.
 - Support only approved RSS feeds, documented APIs, and permitted public retrieval methods. Users can enable/disable catalog entries but cannot add arbitrary URLs or authenticated/paywalled sources.
 - Use manual refresh plus a local hourly schedule. Display last successful check and failures. This is a demo cadence, not a service-level or real-time promise; production source terms and limits must be re-reviewed before any deployment.
+
+## Amendment 2026-11-14: PHP2Shell demo scenario
+The starter catalog adds **PHP security announcements** (php.net public Atom feed, tier A), collected first so
+that the official advisory becomes the primary record. The other catalog sources are unchanged.

@@ -14,15 +14,19 @@ STAGES = ["Preparation", "Detection", "Containment", "Recovery", "Review"]
 ACTION_STATUSES = {"open": "Open", "in_progress": "In progress", "done": "Done"}
 
 TEMPLATES = {
-    "package-hallucination-squatting": {
-        "title": "Malicious dependency via AI agent",
+    "php2shell": {
+        "title": "Critical PHP remote code execution (PHP2Shell)",
         "actions": [
-            ("Detection", "Review lockfiles and package installation history.", "author"),
-            ("Containment", "Disable automatic package installation for coding agents and require human approval.", "author"),
-            ("Containment", "Check the runtime agent's production install permission; revoke it if evidence supports it.",
-             "second_lead"),
-            ("Recovery", "Rebuild from reviewed, pinned dependencies; rotate keys only if exposure is indicated.", "author"),
-            ("Review", "Add or update the LLM03 dependency-review control.", "author"),
+            ("Detection", "Confirm the PHP version on every internet-facing service and review web and PHP-FPM logs "
+                          "since October 21 for unusual requests or crashes.", "author"),
+            ("Containment", "Upgrade the billing portal to PHP 8.3.36 or later and restart every PHP-FPM worker.",
+             "author"),
+            ("Containment", "Until the upgrade is verified, set session.upload_progress.enabled = 0 in the PHP-FPM pool "
+                            "configuration and confirm the portal's internet exposure.", "second_lead"),
+            ("Recovery", "If indicators of compromise are found, rebuild the host from a clean image and rotate the "
+                         "secrets the portal can read.", "author"),
+            ("Review", "Adopt a 72-hour patch target for critical advisories on internet-facing systems "
+                       "(CIS Controls v8, Safeguard 7.4).", "author"),
         ],
     },
 }

@@ -3,8 +3,8 @@
 from tests.conftest import login, org_id, refresh
 
 FERNWOOD = "Fernwood Labs"
-AGENT = {"name": "Team coding agent", "category": "Coding assistant", "version": "", "criticality": "High",
-         "capabilities": "ai_coding_agent, auto_install_packages"}
+AGENT = {"name": "Storefront (PHP)", "category": "Web application", "product_key": "php", "version": "8.4.10",
+         "version_status": "known", "criticality": "High", "capabilities": "php"}
 
 
 def collect_as_fernwood(client, db):
@@ -30,7 +30,7 @@ def test_codex_repro_new_org_with_matching_inventory_gets_alert(client, db):
     refresh(client)
     (alert,) = alerts(db, jun)
     rel = db.execute("SELECT match_state, priority FROM relevance WHERE org_id=?", (jun,)).fetchone()
-    assert rel["match_state"] == "possible"
+    assert rel["match_state"] == "confirmed"
     assert client.get(f"/alerts/{alert['id']}").status_code == 200
 
 
@@ -51,8 +51,9 @@ def test_enabling_a_source_assesses_findings_it_already_collected(client, db):
     # Simulate an org that was never assessed for the finding (creation already assessed it once, and
     # disabling a source only stops future collection, so known findings stay known by design).
     db.execute("DELETE FROM relevance WHERE org_id=?", (jun,))
-    db.execute("INSERT INTO inventory_items (org_id, name, criticality, capabilities, updated_at)"
-               " VALUES (?, 'Agent', 'High', '[\"ai_coding_agent\", \"auto_install_packages\"]', 'now')", (jun,))
+    db.execute("INSERT INTO inventory_items (org_id, name, product_key, version, version_status, criticality,"
+               " capabilities, updated_at) VALUES (?, 'Storefront', 'php', '8.4.10', 'known', 'High', '[\"php\"]', 'now')",
+               (jun,))
     db.commit()
     assert alerts(db, jun) == []
     client.post(f"/sources/{srcs['csa']}/toggle")  # re-enable
@@ -63,8 +64,9 @@ def test_refresh_assesses_backlog_for_orgs_without_prior_relevance(client, db, a
     collect_as_fernwood(client, db)
     jun = new_org(client, db)
     # Inventory inserted outside the app's routes: only the refresh can pick it up.
-    db.execute("INSERT INTO inventory_items (org_id, name, criticality, capabilities, updated_at)"
-               " VALUES (?, 'Agent', 'High', '[\"ai_coding_agent\", \"auto_install_packages\"]', 'now')", (jun,))
+    db.execute("INSERT INTO inventory_items (org_id, name, product_key, version, version_status, criticality,"
+               " capabilities, updated_at) VALUES (?, 'Storefront', 'php', '8.4.10', 'known', 'High', '[\"php\"]', 'now')",
+               (jun,))
     db.execute("DELETE FROM relevance WHERE org_id=?", (jun,))
     db.commit()
     refresh(client)

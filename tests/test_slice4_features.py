@@ -25,8 +25,9 @@ def fern_alert(client, db, user="sureh"):
 
 
 # ------------------------------------------------------------------ CAN-REQ-006 correction
-ORIGINAL = "Automatic dependency installation by AI agents is a relevant risk factor for investigation."
-CORRECTED = "Automatic dependency installation by the coding assistant is the main risk factor to investigate."
+ORIGINAL = ("An internet-facing service on a PHP version inside the affected range should be treated as urgent "
+            "patch work.")
+CORRECTED = "The billing portal is internet-facing and on an affected PHP version; patching it is the top priority."
 
 
 def test_apply_corrections_overlays_matching_text_only():
@@ -115,18 +116,17 @@ def test_lead_cannot_edit_profile_but_can_maintain_inventory(client, db):
 
 def test_inventory_edit_and_delete_are_audited_and_rescore(client, db):
     fern, alert = fern_alert(client, db, user="wyatt")
-    items = db.execute("SELECT id FROM inventory_items WHERE org_id=? AND name IN"
-                       " ('AI coding assistant', 'Python runtime agent framework')", (fern,)).fetchall()
-    for it in items:
-        client.post(f"/organization/inventory/{it['id']}", data={"name": "Renamed tool", "version": "1.2",
-                                                                 "version_status": "known", "criticality": "Low",
-                                                                 "capabilities": ""})
+    portal = db.execute("SELECT id FROM inventory_items WHERE org_id=? AND product_key='php'", (fern,)).fetchone()["id"]
+    client.post(f"/organization/inventory/{portal}", data={"name": "Customer billing portal (PHP-FPM)",
+                                                           "product_key": "php", "version": "8.3.36",
+                                                           "version_status": "known", "criticality": "Critical",
+                                                           "capabilities": "php"})
     rel = db.execute("SELECT match_state FROM relevance WHERE org_id=?", (fern,)).fetchone()
-    assert rel["match_state"] == "no_match"
-    edited = db.execute("SELECT * FROM inventory_items WHERE id=?", (items[0]["id"],)).fetchone()
-    assert (edited["version"], edited["version_status"], edited["criticality"]) == ("1.2", "known", "Low")
-    client.post(f"/organization/inventory/{items[0]['id']}/delete")
-    assert db.execute("SELECT 1 FROM inventory_items WHERE id=?", (items[0]["id"],)).fetchone() is None
+    assert rel["match_state"] == "no_match"  # patched to a fixed release: no longer affected
+    edited = db.execute("SELECT * FROM inventory_items WHERE id=?", (portal,)).fetchone()
+    assert (edited["version"], edited["version_status"], edited["criticality"]) == ("8.3.36", "known", "Critical")
+    client.post(f"/organization/inventory/{portal}/delete")
+    assert db.execute("SELECT 1 FROM inventory_items WHERE id=?", (portal,)).fetchone() is None
     actions = {r[0] for r in db.execute("SELECT action FROM audit_events WHERE org_id=?", (fern,))}
     assert {"inventory.updated", "inventory.deleted"} <= actions
 
@@ -160,7 +160,7 @@ def test_new_user_registers_and_creates_org_as_admin(client, db):
     page = client.get("/").data.decode()
     assert "Juniper Robotics" in page
     assert client.post("/orgs/select", data={"org_id": org_id(db, FERNWOOD)}).status_code == 404
-    assert db.execute("SELECT COUNT(*) FROM org_sources WHERE org_id=? AND enabled=1", (org["id"],)).fetchone()[0] == 4
+    assert db.execute("SELECT COUNT(*) FROM org_sources WHERE org_id=? AND enabled=1", (org["id"],)).fetchone()[0] == 5
 
 
 def test_duplicate_username_is_rejected(client, db):

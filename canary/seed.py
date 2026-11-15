@@ -25,10 +25,14 @@ USERS = [
 ORGS = {
     "Fernwood Labs": {
         "industry": "Software", "size": "5 people", "location": "Unknown",
-        "interests": "AI coding agents, AI supply chain, LLM APIs",
+        "interests": "AI coding agents, AI supply chain, LLM APIs, web application security",
         "members": [("wyatt", "admin"), ("sureh", "lead"), ("koewen", "lead")],
-        "sources": ["thehackernews", "csa", "ghsa", "owasp-genai"],
+        "sources": ["php-net", "thehackernews", "csa", "ghsa", "owasp-genai"],
         "inventory": [
+            dict(name="Customer billing portal (PHP-FPM)", category="Web application", product_key="php",
+                 version="8.3.30", owner_team="Platform", criticality="Critical", capabilities=["php"],
+                 capability_notes="Runtime: PHP 8.3.30 under PHP-FPM; serves customer invoices and payment pages",
+                 data_access_notes="Reads customer billing records and the payment provider API key (fictional)"),
             dict(name="AI coding assistant", category="Coding assistant", product_key="ai-coding-assistant",
                  owner_team="Engineering", criticality="High",
                  capabilities=["ai_coding_agent", "auto_install_packages"],
@@ -43,7 +47,7 @@ ORGS = {
             dict(name="Package sources: PyPI and npm", category="Package registry", product_key="pypi-npm",
                  owner_team="Engineering", criticality="Unknown", capabilities=["package_registry"]),
         ],
-        "assessment": {"dep-review": "No"},
+        "assessment": {"dep-review": "No", "patch-sla": "No"},
         "routes": [("cybersecurity", "sureh")],
     },
     "Prairie Valley Medical Center": {
@@ -64,11 +68,16 @@ ORGS = {
 }
 
 QUESTIONS = [
+    ("patch-sla", "Are critical security patches applied to internet-facing systems within 72 hours?",
+     "Attackers often exploit critical flaws within days of a fix being published. A short, agreed patch window "
+     "for internet-facing systems closes that gap.",
+     "CIS Critical Security Controls v8", "Safeguard 7.4: Perform automated application patch management",
+     "https://www.cisecurity.org/controls/continuous-vulnerability-management", "php2shell"),
     ("dep-review", "Are AI-suggested dependencies reviewed before install?",
      "Coding assistants and agents can suggest or install packages. A human or allowlist review before install "
      "blocks hallucinated or malicious package names.",
      "OWASP Top 10 for LLM Applications 2025", "LLM03:2025 Supply Chain",
-     "https://genai.owasp.org/llmrisk/llm032025-supply-chain/", "package-hallucination-squatting"),
+     "https://genai.owasp.org/llmrisk/llm032025-supply-chain/", None),
     ("agent-permissions", "Are AI agents limited to the minimum tools and permissions they need?",
      "Agents with broad permissions (installing software, running commands, reaching keys) can do more harm "
      "if manipulated.",
@@ -128,8 +137,9 @@ def seed(conn):
             conn.execute(
                 "INSERT INTO inventory_items (org_id, name, category, product_key, version, version_status, owner_team,"
                 " criticality, capabilities, capability_notes, data_access_notes, is_demo, updated_at)"
-                " VALUES (?,?,?,?,NULL,'unknown',?,?,?,?,?,1,?)",
-                (org_id, item["name"], item["category"], item["product_key"], item["owner_team"], item["criticality"],
+                " VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?)",
+                (org_id, item["name"], item["category"], item["product_key"], item.get("version"),
+                 "known" if item.get("version") else "unknown", item["owner_team"], item["criticality"],
                  json.dumps(item["capabilities"]), item.get("capability_notes"), item.get("data_access_notes"), ts))
         test_addrs = current_app.config.get("TEST_RECIPIENTS") or {}
         for username, _role in spec["members"]:

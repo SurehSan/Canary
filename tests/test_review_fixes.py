@@ -105,5 +105,5 @@ def test_followup_button_is_disabled_until_refresh(client, db):
     alert = db.execute("SELECT id FROM alerts WHERE org_id=?", (org_id(db, FERNWOOD),)).fetchone()["id"]
     items = db.execute("SELECT source_label, group_status FROM source_items WHERE finding_id="
                        "(SELECT finding_id FROM alerts WHERE id=?) ORDER BY id", (alert,)).fetchall()
-    assert [i["group_status"] for i in items][0] == "primary" and items[0]["source_label"] == "The Hacker News"
-    assert items[-1]["source_label"] == "Additional evidence (demo follow-up)"
+    assert [i["group_status"] for i in items][0] == "primary" and items[0]["source_label"] == "PHP security announcements"
+    assert items[-1]["source_label"] == "Additional evidence (follow-up report)"

@@ -1,13 +1,14 @@
 # Canary — local demo prototype
 
 > **Demo data.** Fernwood Labs, Prairie Valley Medical Center, their people,
-> inventory, and outcomes are fictional. The HalluSquatting / slopsquatting
-> sources are real public articles, linked with their original dates.
+> inventory, and outcomes are fictional. The demo threat, **PHP2Shell**
+> (CVE-2026-109618, CVE-2026-109619), and its sources are real, linked with their
+> original dates.
 > Not production-hardened; no HIPAA or other compliance claim.
 
 Planning documents: [implementation plan](documents/implementation-plan.md) ·
 [design](design/design.md) · [requirements](requirements/README.md) ·
-[Fernwood demo flow](documents/hallusquatting-demo-flow.md) ·
+[Fernwood demo flow](documents/php2shell-demo-flow.md) ·
 [methodology](methodology.md)
 
 ## Run the demo
@@ -67,8 +68,10 @@ window for `sureh`, because one browser window holds one signed-in person.
 **6. Follow the demo script:** [documents/demo-script.md](documents/demo-script.md)
 has an 8-minute and a 3-minute walkthrough, with clicks, talking points, and
 fallbacks. In short: as Wyatt, **Sources → Refresh sources now** → open the
-HalluSquatting alert (**Possible match, 65/100, P2 High**) → **Notifications →
-Run processing cycle** (the test email). Then, as Sureh: assign the alert →
+**PHP2Shell** alert (**Confirmed match, 87/100, held at P2**) → **Notifications →
+Run processing cycle** (the P2 email) → **Presenter tools → Deliver later
+exploitation report (Check Point)** (escalates to **P1, 95/100**, with an immediate
+update email). Then, as Sureh: assign the alert →
 **Get a step-by-step guide** → **Create contingency plan** → submit. Finally, as
 Wyatt, approve the plan.
 
@@ -137,7 +140,7 @@ affected products, or source evidence) send an **Update**. Automated tests use
 a local SMTP capture server ([tests/smtp_capture.py](tests/smtp_capture.py)).
 **Real inbox delivery was verified on 2026-11-14.** Sending through Gmail SMTP
 (an App Password) to a team-owned university inbox on the allowlist, the delivery
-check and the P2 HalluSquatting alert were both accepted and received, and an
+check and the P2 alert email were both accepted and received, and an
 address off the allowlist was rejected before any send. Use a Gmail
 (or similar) sender: the team's university Microsoft 365 tenant disables SMTP
 AUTH (`535 5.7.139 SmtpClientAuthentication is disabled for the Tenant`), which
@@ -196,7 +199,7 @@ HTTP routes (form posts; session cookie auth):
 | `POST /alerts/<id>/assign` (`assignee_id`), `POST /alerts/<id>/status` (`status`, `note`) | admin, lead | investigation; invalid transition → 400 |
 | `POST /alerts/<id>/grouping/<item_id>/confirm|undo` | admin, lead | review a proposed duplicate grouping |
 | `POST /alerts/<id>/override` (`priority`, `match_state`, `reason` required) | admin, lead | reviewer override for this finding only |
-| `POST /sources/followup` | admin | demo step: attach the later Xygeni report as additional evidence |
+| `POST /sources/followup` | admin | demo step: attach Check Point's exploitation advisory as additional evidence (refused until the finding is collected) |
 | `GET /notifications` | member | SMTP/allowlist status, recipients, routing rules, delivery log |
 | `POST /notifications/recipients` (`user_id`, `email`), `POST /notifications/rules` (`user_id`, `category`), `POST /notifications/rules/<id>/delete` | admin | recipient mapping and routing |
 | `POST /notifications/process`, `POST /notifications/digest` | admin | run the P1/P2 processing cycle / the P3/P4 daily digest now |
@@ -217,58 +220,58 @@ Low 3), source reliability/recency 0–10 (best tier A5/B4/C2 + corroboration
 2 sources +2 / 3+ +3 + newest source ≤30d 4 / ≤180d 3 / ≤365d 2), questionnaire
 gap 0–5 (No 5, Partial/Unknown 3, unanswered 2), duplicate penalty −10. Bands:
 80+ P1, 60–79 P2, 35–59 P3, else P4. P1 also requires active exploitation and a
-Confirmed match to a Critical asset. Seeded Fernwood result:
-16 + 8 + 12 + 15 + 9 + 5 = **65 → P2, Possible match** (as of 2026-11-14; the
-recency term drops by 1 once the newest source is more than 180 days old,
-after 2027-01-04, which still leaves P2).
+Confirmed match to a Critical asset. Version ranges such as `>=8.3.0,<8.3.36` are
+supported; an Unknown version is never Confirmed. Seeded Fernwood result for
+PHP2Shell (billing portal on PHP 8.3.30): after Refresh, 25 + 12 (exploitation
+attempts reported, unverified) + 20 + 15 + 10 + 5 = **87 → held at P2** (the P1
+gate isn't met). After the Check Point report, exploitation is confirmed:
+25 + 20 + 20 + 15 + 10 + 5 = **95 → P1**. Source reliability stays at its 10-point
+cap until well into 2027, so these numbers don't drift.
 
-## Walkthrough (slices 1–3)
+## Walkthrough
 
-1. Sign in as `wyatt`. The dashboard shows the **Demo data** banner and 0 alerts.
-2. **Organization**: profile, inventory (runtime agent version **Unknown**),
-   two Cybersecurity Leads, and the initial **No** answer for LLM03.
-3. **Sources**: four catalog sources, cadences, and **Refresh sources now**.
-   Optionally press **Simulate outage** on GitHub Security Advisories first; the
-   refresh then shows it as **Failed** after 3 attempts, not as an empty success.
-4. Refresh. THN and CSA are grouped under one finding: “HalluSquatting:
-   hallucinated package names used to hijack AI coding agents.” The CSA link is a
-   **proposed** grouping (shared technique alias) that a Lead can confirm or undo.
-5. Open the alert: Possible match, 65/100, P2 High, every factor, why it is
-   not P1, source-supported claims with citations, organization context,
-   unknowns, Canary interpretation, and the THN/CSA exploitation **conflict**.
-6. Sign in as `sureh`, assign the alert to yourself, and move it to **Under
-   investigation**. The dashboard and audit history update from saved records.
-7. Sign in as `priya`: Prairie Valley has no alert, and Fernwood alert URLs
-   return 404.
-8. **Notifications** (as `wyatt`): the page shows the test-mode notice, SMTP
-   status, the allowlist, and the routing rule (Cybersecurity alerts go to Sureh).
-   Enter Sureh's team test address and press **Run processing cycle**. The P2
-   alert is sent, or shown as Blocked or Rejected. Use **Send delivery check**
-   with an address off the allowlist to show it is rejected before sending.
-   Turn on **Simulate delivery failure**, send, then **Retry**.
-9. **Sources → Demo step: deliver later follow-up report (Xygeni)**: it attaches
-   as a third source (a proposed grouping). The alert shows "Updated evidence",
-   and the next cycle sends an **Update** email. Confirming a grouping changes
-   nothing material, so it is **Suppressed**.
-10. On the alert, **Override** to P3 with a reason. The computed and override
-    values both stay visible, and the update goes to the daily digest. (Skip
-    this during the main walkthrough.)
-11. As `sureh`, on the alert: **Get a step-by-step guide**. Five ordered steps
-    appear, each with why it matters, checks, technique, basis, and links. One
-    targeted question follows (production install permission). Answer
-    **Unknown** and step 4 stays conditional. Mark step 1 in progress, or edit
-    a step (edits are audited with before/after).
-12. **Create contingency plan from this guide**: "Malicious dependency via AI
-    agent" with Detection, Containment, Recovery, and Review (no forced
-    Preparation stage). Koewen owns the runtime-permission check. Press
-    **Submit for review**; Sureh cannot approve. Sign in as `wyatt`, tick the
-    confirmation, and **Approve**. Editing an approved plan returns it to
-    Draft and keeps the approved version.
-13. Close out as `sureh`: Mitigation in progress → Resolved and verified (with
-    a verification note). **Questionnaire**: save a new assessment with
-    **Yes** for dependency review; the original **No** stays in history.
-    **Audit** shows every step.
-14. Footer: **Reset demo data** restores the seed state.
+Scenario: [documents/php2shell-demo-flow.md](documents/php2shell-demo-flow.md).
+Presenter script: [documents/demo-script.md](documents/demo-script.md).
+
+1. Sign in as `wyatt`. The dashboard shows 0 alerts.
+2. **Organization**: profile, inventory (billing portal on **PHP 8.3.30**,
+   Critical), two Cybersecurity Leads, and the initial **No** for the 72-hour
+   patching question (CIS Controls v8, Safeguard 7.4).
+3. **Sources**: five catalog sources, cadences, and **Refresh sources now**.
+   Optionally simulate an outage first; the refresh then shows **Failed** after 3
+   attempts, not an empty success.
+4. Refresh. The php.net advisory, two GitHub advisories, and a THN article become
+   one finding, "PHP2Shell: unauthenticated remote code execution in PHP
+   (CVE-2026-109618, CVE-2026-109619)". The GitHub advisories are **exact**
+   matches (CVE); the THN article is a **proposed** grouping (matched by name)
+   that a Lead can confirm or undo.
+5. Open the alert: **Confirmed match, 87/100, P2 High**. It shows every factor,
+   why it's held at P2 (the P1 gate needs confirmed exploitation), the
+   source-supported claims with citations, the organization context, the
+   unknowns, the interpretation, and the **unverified** exploitation note.
+6. **Notifications → Run processing cycle**: the P2 email goes to Sureh's
+   allowlisted address (or shows as Blocked or Rejected). **Send delivery check**
+   to an address off the allowlist is rejected before sending.
+7. **Presenter tools → Deliver later exploitation report (Check Point)**: a fifth
+   source, confirmed exploitation, **P1 Critical, 95/100**, "Updated evidence",
+   and an **Update** email sent **immediately** ("priority P2->P1").
+8. As `sureh`: assign the alert and move it to **Under investigation**. Then
+   **Get a step-by-step guide**: five steps (confirm the version, upgrade to
+   8.3.36, interim `session.upload_progress.enabled = 0`, look for signs of
+   compromise, and rotate keys only if indicators are found). The targeted
+   question is "Is the Customer billing portal (PHP-FPM) reachable from the
+   internet?"; answer **Unknown** and step 4 stays conditional.
+9. **Create contingency plan from this guide**: "Critical PHP remote code
+   execution (PHP2Shell)" with Detection, Containment, Recovery, and Review.
+   Koewen owns the interim mitigation and exposure check. **Submit for review**;
+   Sureh can't approve. As `wyatt`, tick the confirmation and **Approve**.
+10. Close out as `sureh`: Mitigation in progress → Resolved and verified (with a
+    note). **Questionnaire**: a new assessment with **Yes** for the 72-hour patch
+    target; the original **No** stays in history. **Audit** shows every step.
+11. As `priya`: Prairie Valley (no PHP) has no alert, and Fernwood alert URLs
+    return 404.
+12. Footer: **Reset demo data** (or **Reset workspace** in presentation mode)
+    restores the seed state.
 
 The automated version of this walkthrough is
 [tests/test_e2e_fernwood.py](tests/test_e2e_fernwood.py).
@@ -282,10 +285,10 @@ The automated version of this walkthrough is
 | 003 / 004 | Catalog, enable/disable, manual + hourly collection, run log with adapter, retries, simulated outage, optional live THN RSS with min-interval skip, collected-items list |
 | 005 | Canonical finding, exact/proposed grouping, confirm/undo, revisions, follow-up evidence update |
 | 006 | Deterministic demo analysis with citations, unknowns, conflicts; human corrections with prior value, editor, timestamp, and reason, shown in place, carried into emails, kept across re-analysis. Optional OpenAI provider not built (deterministic demo analysis is the documented fallback) |
-| 007 | Match states, full rubric, P1 gate, factor display, reviewer override with reason |
+| 007 | Match states with version-range matching, full rubric, P1 gate (demonstrated by the PHP2Shell P2 → P1 escalation), factor display, reviewer override with reason |
 | 008 | List, filters, unread, assignment, all statuses with transition rules and note requirement, update indicator |
 | 009 | Allowlist-before-send, routing by category/member, P1 immediate / P2 cycle / P3–P4 digest, suppression, updates, failure + retry, delivery log, test labels. Real inbox delivery verified 2026-11-14 via Gmail SMTP to an allowlisted team inbox |
-| 010 | OWASP LLM 2025 mapped questions with help text, Yes/No/Partial/Unknown/N/A, append-only assessments, explained threat weighting (answers never rewritten), reassessment rescoring |
+| 010 | OWASP LLM 2025 and CIS Controls v8 (Safeguard 7.4) mapped questions with help text, Yes/No/Partial/Unknown/N/A, append-only assessments, explained threat weighting (answers never rewritten), reassessment rescoring |
 | 011 | Guide from alert (no questionnaire needed), 5 ordered steps with rationale/checks/technique/basis/links, one targeted question with Unknown, conditional step, step status + edits audited, limited generic guide for unknown threats |
 | 012 | Plan from guide, applicable stages only, owners, review/due dates, Draft → In review → Approved (Admin only, explicit confirmation) → Archived, approved version preserved on edit, version history |
 | 013 | Dashboard counts from records (incl. open plans, plans awaiting approval, waiting guide questions), source health |

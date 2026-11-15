@@ -1,4 +1,4 @@
-"""End-to-end Fernwood HalluSquatting walkthrough (documents/hallusquatting-demo-flow.md, steps 1-11)."""
+"""End-to-end Fernwood PHP2Shell walkthrough (documents/php2shell-demo-flow.md, steps 1-11)."""
 from canary.db import get_db
 from tests.conftest import login, org_id
 from tests.smtp_capture import CaptureServer
@@ -19,17 +19,18 @@ def test_full_fernwood_walkthrough(tmp_path):
             # 1. Organization and roles
             login(c, "wyatt", org=fern)
             org = c.get("/organization").data.decode()
-            assert "Demo data" in org and "Unknown" in org and "Cybersecurity Lead" in org
+            assert "Demo data" in org and "8.3.30" in org and "Cybersecurity Lead" in org
 
             # 2. Sources + refresh; 3. normalize/dedup
             c.post("/notifications/recipients", data={"user_id": uid["sureh"], "email": SUREH_ADDR})
             c.post("/sources/refresh")
             alert = db.execute("SELECT id FROM alerts WHERE org_id=?", (fern,)).fetchone()["id"]
-            assert db.execute("SELECT COUNT(*) FROM source_items").fetchone()[0] == 2
+            assert db.execute("SELECT COUNT(*) FROM source_items").fetchone()[0] == 4
+            assert db.execute("SELECT COUNT(*) FROM findings").fetchone()[0] == 1
 
-            # 4-5. Evidence-backed analysis, Possible / 65 / P2
+            # 4-5. Evidence-backed analysis: Confirmed / 87 / held at P2 (exploitation not yet confirmed)
             page = c.get(f"/alerts/{alert}").data.decode()
-            assert "Possible match · Score 65/100" in page and "P2 High" in page and "Unknown" in page
+            assert "Confirmed match · Score 87/100" in page and "P2 High" in page and "gate not met" in page
 
             # 6. Real test email path (local capture server stands in for the SMTP provider)
             c.post("/notifications/process")
@@ -37,9 +38,12 @@ def test_full_fernwood_walkthrough(tmp_path):
             c.post("/notifications/test", data={"email": "not-on-list@else.example"})
             assert db.execute("SELECT status FROM notifications WHERE kind='test'").fetchone()[0] == "rejected"
 
-            # 3 (later). Follow-up evidence attaches as a third source
+            # 3 (later). Check Point confirms exploitation -> escalates to P1 with an immediate update email
             c.post("/sources/followup")
-            assert db.execute("SELECT COUNT(*) FROM source_items").fetchone()[0] == 3
+            assert db.execute("SELECT COUNT(*) FROM source_items").fetchone()[0] == 5
+            page = c.get(f"/alerts/{alert}").data.decode()
+            assert "Confirmed match · Score 95/100" in page and "P1 Critical" in page
+            assert smtp.messages[-1]["msg"]["Subject"].startswith("[CANARY DEMO - TEST] Update: P1")
             c.post("/logout")
 
             # 7. Sureh investigates
@@ -60,7 +64,7 @@ def test_full_fernwood_walkthrough(tmp_path):
             plan = db.execute("SELECT id FROM plans WHERE guide_id=?", (guide,)).fetchone()["id"]
             koewen_action = db.execute("SELECT 1 FROM plan_actions WHERE plan_id=? AND owner_id=?",
                                        (plan, uid["koewen"])).fetchone()
-            assert koewen_action, "Koewen owns the runtime permission check"
+            assert koewen_action, "Koewen owns the interim mitigation and exposure check"
             c.post(f"/plans/{plan}/submit")
             assert c.post(f"/plans/{plan}/approve", data={"confirm": "yes"}).status_code == 403
             c.post("/logout")
@@ -73,11 +77,11 @@ def test_full_fernwood_walkthrough(tmp_path):
             login(c, "sureh", org=fern)
             c.post(f"/alerts/{alert}/status", data={"status": "mitigation_in_progress"})
             c.post(f"/alerts/{alert}/status", data={"status": "resolved_verified",
-                                                    "note": "Runtime cannot install packages; lockfiles clean; auto-install off"})
-            c.post("/questionnaire", data={"q_dep-review": "Yes"})
+                                                    "note": "Portal upgraded to PHP 8.3.36; workers restarted; no indicators found"})
+            c.post("/questionnaire", data={"q_patch-sla": "Yes"})
             answers = [r[0] for r in db.execute(
                 "SELECT a.answer FROM answers a JOIN assessments s ON s.id=a.assessment_id"
-                " WHERE s.org_id=? AND a.question_key='dep-review' ORDER BY s.id", (fern,))]
+                " WHERE s.org_id=? AND a.question_key='patch-sla' ORDER BY s.id", (fern,))]
             assert answers == ["No", "Yes"]
             actions = {r[0] for r in db.execute("SELECT action FROM audit_events WHERE org_id=?", (fern,))}
             assert {"alert.assigned", "alert.status_changed", "guide.answered", "plan.approved",

@@ -10,8 +10,10 @@ from tests.test_notifications import make_app
 FERNWOOD = "Fernwood Labs"
 PRAIRIE = "Prairie Valley Medical Center"
 SUREH_ADDR = "sureh-test@team.example"
-ORIGINAL = "Researchers showed AI coding assistants can be led to fetch and run attacker-registered code under names that models commonly hallucinate."
-CORRECTED = "Researchers demonstrated package-name confusion; no evidence links an installation to this organization."
+# Updated by Claude for the PHP2Shell demo scenario (was the HalluSquatting "what happened" sentence).
+ORIGINAL = ("The PHP project fixed two critical memory-safety flaws that let an unauthenticated attacker run code on "
+            "servers running PHP 5.4 through 8.5.")
+CORRECTED = "PHP fixed two critical RCE flaws; nothing yet shows this organization was attacked."
 
 
 def test_fernwood_outage_does_not_fail_prairie_valley_or_ingest_ghsa(client, db):
@@ -27,9 +29,15 @@ def test_fernwood_outage_does_not_fail_prairie_valley_or_ingest_ghsa(client, db)
         (fern, source_id),
     ).fetchone()
     assert (fern_run["outcome"], fern_run["attempts"], fern_run["new_items"]) == ("failed", 3, 0)
+    # Updated by Claude for the PHP2Shell scenario: GHSA now has items, and Prairie Valley (not simulating) still
+    # gets the shared fetch. Fernwood's own run failed; the items came only from the shared run (org_id NULL).
+    shared = db.execute(
+        "SELECT outcome, new_items FROM collection_runs WHERE org_id IS NULL AND source_id=? ORDER BY id DESC LIMIT 1",
+        (source_id,)).fetchone()
+    assert (shared["outcome"], shared["new_items"]) == ("success", 2)
     assert db.execute(
-        "SELECT COUNT(*) FROM source_items WHERE source_id=?", (source_id,)
-    ).fetchone()[0] == 0
+        "SELECT COUNT(*) FROM source_items si JOIN collection_runs r ON r.id=si.collection_run_id"
+        " WHERE si.source_id=? AND r.org_id IS NOT NULL", (source_id,)).fetchone()[0] == 0
 
     client.post("/logout")
     login(client, "priya", org=prairie)

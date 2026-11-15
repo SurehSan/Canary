@@ -42,3 +42,15 @@ CAN-REQ-006 and CAN-REQ-007. CAN-REQ-010 is used conditionally when targeted que
 - Generate the initial guide directly from the alert; ask only a targeted question when a missing fact materially changes guidance. Ask one at a time, accept Unknown/Not applicable, and retain conditional steps when unanswered. The hallusquatting flow demonstrates the production install-permission question.
 - Link to relevant OWASP Top 10 for LLM Applications (2025 edition) guidance and authoritative vendor/advisory sources. Label all generated content “AI-generated draft for human review.” Do not execute actions or claim exposure.
 - Guide export is outside the local prototype; users can view and edit it in the application and create a linked plan.
+
+## Amendment 2026-11-14: PHP2Shell demo scenario
+The demo guide covers PHP2Shell in five steps:
+
+1. Confirm the PHP version, including vendor backports.
+2. Upgrade to a fixed release and restart the workers.
+3. Apply the interim `session.upload_progress.enabled = 0` until then.
+4. Check for signs of compromise.
+5. Rotate secrets only if indicators are found.
+
+The targeted question is "Is the Customer billing portal (PHP-FPM) reachable from the internet?" (Yes / No /
+Unknown). It is not asked when the inventory already records the answer.

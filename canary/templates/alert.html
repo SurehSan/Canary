@@ -125,7 +125,7 @@
       <h3>Conflicting or unverified claims</h3>
       <ul class="conflicts">{% for c in analysis.conflicts %}<li><strong>{{ c.topic }}:</strong> {{ c.statement }} {% for i in c.citations %}<a class="cite" href="#src-{{ i }}">[{{ cite[i] }}]</a>{% endfor %}</li>{% endfor %}</ul>
       {% endif %}
-      <p class="small muted">Exploitation evidence: {{ analysis.exploitation_reason }}{% if analysis.owasp %} · Framework: {{ analysis.owasp }}{% endif %}</p>
+      <p class="small muted">Exploitation evidence: {{ analysis.exploitation_reason }}{% if analysis.framework %} · Framework: {{ analysis.framework }}{% endif %}</p>
     </div>
   </div>
   <p class="small muted">Analysis is generated per finding version (v{{ analysis_row.finding_version }}) from source metadata only; source text is treated as untrusted input.{% if not presentation %} No API key is used in demo mode.{% endif %} Human corrections are shown in place and never overwrite the generated record.</p>

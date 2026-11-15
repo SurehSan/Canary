@@ -141,14 +141,19 @@ def ingest_item(conn, raw, src, run_id, source_label=None, tier=None):
     ts = now_iso()
     if match:
         finding_id, status, basis = match["finding_id"], match["status"], match["basis"]
+        if status == "exact" and ids:  # keep every advisory identifier on the finding for later exact matches
+            known = json.loads(conn.execute("SELECT identifiers FROM findings WHERE id=?", (finding_id,)).fetchone()[0])
+            merged = known + [i for i in ids if i not in known]
+            if merged != known:
+                conn.execute("UPDATE findings SET identifiers=? WHERE id=?", (json.dumps(merged), finding_id))
     else:
         spec = CURATED.get(technique, {})
         finding_id = conn.execute(
-            "INSERT INTO findings (title, technique, event_type, technique_tags, industries, identifiers,"
-            " first_seen_at, updated_at) VALUES (?,?,?,?,?,?,?,?)",
+            "INSERT INTO findings (title, technique, event_type, affected_products, technique_tags, industries,"
+            " identifiers, first_seen_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
             (spec.get("title", raw["title"]), technique, spec.get("event_type"),
-             json.dumps(spec.get("technique_tags", [])), json.dumps(spec.get("industries", [])),
-             json.dumps(ids), ts, ts)).lastrowid
+             json.dumps(spec.get("affected_products", [])), json.dumps(spec.get("technique_tags", [])),
+             json.dumps(spec.get("industries", [])), json.dumps(ids), ts, ts)).lastrowid
         status, basis = "primary", "First report of this finding"
     conn.execute(
         "INSERT INTO source_items (source_id, source_label, tier, url, canonical_url, title, published_at, retrieved_at,"

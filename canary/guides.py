@@ -1,60 +1,73 @@
 """Targeted threat guides — CAN-REQ-011.
 
-Deterministic templates keyed by technique, checked against the
-hallusquatting demo. Links are limited to the finding's own sources plus
-framework guidance. At most one targeted clarification is asked, and only when
-the organization's inventory does not already answer it.
+Deterministic templates keyed by technique, checked against the PHP2Shell
+demo. Links are limited to the finding's own sources plus framework guidance.
+At most one targeted clarification is asked, and only when the organization's
+inventory does not already answer it.
 """
-from .analysis import CSA_URL, THN_URL, XYGENI_URL
+from .fixtures import CHECK_POINT_URL, GHSA_OOM_URL, GHSA_STATE_URL, PHP_NET_URL, THN_URL
 
 LABEL = "AI-generated draft for human review (demo template; no actions are executed)"
-OWASP_LLM03 = {"title": "OWASP LLM03:2025 Supply Chain", "url": "https://genai.owasp.org/llmrisk/llm032025-supply-chain/"}
-OWASP_LLM06 = {"title": "OWASP LLM06:2025 Excessive Agency", "url": "https://genai.owasp.org/llmrisk/llm062025-excessive-agency/"}
+CIS_7 = {"title": "CIS Controls v8, Control 7: Continuous Vulnerability Management",
+         "url": "https://www.cisecurity.org/controls/continuous-vulnerability-management"}
 
 TEMPLATES = {
-    "package-hallucination-squatting": [
-        dict(action="Review recent lockfile and package-manager changes for unfamiliar or suspicious dependencies.",
-             rationale="An agent that installed a hallucinated or attacker-registered package would leave a trace in "
-                       "lockfiles and install history.",
-             checks="Diff lockfiles over the last 90 days; list packages added by AI tools; check each new package's "
-                    "registry publisher and first-publish date.",
-             technique="Dependency review against the registry (publisher identity, package age, download history).",
-             basis="Generated guidance based on source-supported technique", sources=[CSA_URL, THN_URL], framework=[OWASP_LLM03]),
-        dict(action="Turn off automatic package installation for coding agents and require human approval for new dependencies.",
-             rationale="Auto-install lets a hallucinated name become installed code without anyone seeing it.",
-             checks="Confirm the coding assistant's auto-run / auto-install setting is off for every developer.",
-             technique="Human-in-the-loop approval for package installs; avoid skip-confirmation modes.",
-             basis="Organization context: inventory records auto-install ON", sources=[THN_URL], framework=[OWASP_LLM06]),
-        dict(action="Pin and allowlist dependencies, for example through a lockfile and an approved internal mirror.",
-             rationale="Pinned, allowlisted dependencies stop new unreviewed names from resolving.",
-             checks="CI fails on unpinned or unlisted packages; hash verification is enabled.",
-             technique="Lockfile pinning, hash checking, internal package mirror/allowlist.",
-             basis="Generated guidance based on source-supported mitigation", sources=[CSA_URL], framework=[OWASP_LLM03]),
-        dict(action="Check whether the runtime agent can install packages in production; if it can, restrict that "
-                    "permission and isolate the agent from customer keys.",
-             rationale="A runtime agent that can install packages could pull attacker code next to production secrets.",
-             checks="Review the runtime's IAM/container permissions and network egress to package registries.",
-             technique="Least-privilege runtime: read-only filesystem/no installer, egress restrictions, secret isolation.",
+    "php2shell": [
+        dict(action="Confirm the PHP version on every internet-facing service, starting with the customer billing portal.",
+             rationale="Only versions below the fixed release on each branch are affected, and vendor packages may "
+                       "carry a backported fix under an older version string.",
+             checks="Run php -v on each host, or check the package changelog for CVE-2026-109618 and CVE-2026-109619; "
+                    "compare with 8.5.12, 8.4.27, 8.3.36, and 8.2.35.",
+             technique="Version and changelog verification against the vendor advisory.",
+             basis="Organization context: inventory records PHP 8.3.30 on the billing portal",
+             sources=[PHP_NET_URL], framework=[CIS_7]),
+        dict(action="Upgrade PHP to a fixed release (8.3.36 for the 8.3 branch) and restart every PHP-FPM worker.",
+             rationale="The PHP project says there are no complete mitigations; updating is the only safe choice.",
+             checks="php -v reports a fixed version on every node, and every PHP-FPM worker has been restarted.",
+             technique="Patch deployment with a full worker restart.",
+             basis="Source-supported mitigation", sources=[PHP_NET_URL, GHSA_OOM_URL, GHSA_STATE_URL], framework=[CIS_7]),
+        dict(action="Until the upgrade is live, set session.upload_progress.enabled = 0 in php.ini or the PHP-FPM pool "
+                    "configuration, then restart the workers.",
+             rationale="The PHP advisory lists this setting as a mitigation for CVE-2026-109619. It reduces exposure "
+                       "but is not a complete fix.",
+             checks="The setting shows Off for every pool after the restart (set it in configuration, not ini_set()).",
+             technique="Temporary configuration hardening.",
+             basis="Source-supported interim mitigation", sources=[PHP_NET_URL, GHSA_STATE_URL], framework=[]),
+        dict(action="If the portal was reachable from the internet while it ran an affected version, look for signs "
+                    "of compromise.",
+             rationale="Exploitation attempts were reported soon after disclosure, and patching does not remove an "
+                       "earlier compromise.",
+             checks="Review web, PHP-FPM, and system logs since October 21 for unusual requests, worker crashes, new "
+                    "processes, or new files, and compare with the indicators published in vendor advisories.",
+             technique="Targeted compromise assessment.",
              basis="Generated guidance; depends on an organization fact that is not yet known",
-             sources=[THN_URL], framework=[OWASP_LLM06],
-             condition="Applies as an immediate action only if the runtime agent can install packages in production.",
-             question="install_permission"),
-        dict(action="Rotate credentials only if the investigation finds evidence they may have been exposed.",
-             rationale="Rotation has a cost; no evidence currently ties a malicious package to this organization.",
-             checks="Trigger only if steps 1 or 4 find a suspicious package or install permission with key access.",
+             sources=[THN_URL, CHECK_POINT_URL], framework=[CIS_7],
+             condition="Applies as an immediate action only if the portal is reachable from the internet.",
+             question="internet_exposure"),
+        dict(action="Rotate the payment provider API key and other secrets the portal can read only if step 4 finds "
+                    "signs of compromise.",
+             rationale="Rotation has a cost, and nothing yet ties an attack to this organization.",
+             checks="Trigger only if step 4 finds indicators of compromise.",
              technique="Evidence-based credential rotation.",
-             basis="Generated guidance; conditional on investigation findings", sources=[XYGENI_URL, THN_URL],
-             framework=[OWASP_LLM03]),
+             basis="Generated guidance; conditional on investigation findings",
+             sources=[CHECK_POINT_URL, PHP_NET_URL], framework=[]),
     ],
 }
 
 QUESTIONS = {
-    "install_permission": {
-        "capability": "agent_runtime",
-        "known": {"install_permission_yes": "Yes", "install_permission_no": "No"},
-        "text": "Does the {item} have permission to install packages in production?",
-        "why": "This determines whether step 4 is an immediate action or a precaution to evaluate.",
+    "internet_exposure": {
+        "capability": "php",
+        "known": {"internet_exposed_yes": "Yes", "internet_exposed_no": "No"},
+        "text": "Is the {item} reachable from the internet?",
+        "why": "This determines whether step 4 (looking for signs of compromise) is an immediate action or a "
+               "precaution.",
         "options": ["Yes", "No", "Unknown"],
+        "conditions": {
+            "Yes": ("met", "Immediate action: the portal is reachable from the internet."),
+            "No": ("not_met", "Precaution only: the respondent reports the portal is not reachable from the internet."),
+            "Unknown": ("pending", "Conditional: internet exposure is Unknown. Verify before acting; do not assume "
+                                   "either way."),
+        },
     },
 }
 
@@ -70,14 +83,11 @@ GENERIC = [
 ]
 
 
-def condition_for_answer(answer):
-    if answer == "Yes":
-        return "met", "Immediate action: the runtime agent can install packages in production."
-    if answer == "No":
-        return "not_met", "Precaution only: the respondent reports the runtime agent cannot install packages in production."
+def condition_for_answer(key, answer):
     if answer == "Not applicable":
         return "not_met", "Marked not applicable by the respondent."
-    return "pending", "Conditional: install permission is Unknown. Verify before acting; do not assume either way."
+    conditions = QUESTIONS[key]["conditions"]
+    return conditions.get(answer, conditions["Unknown"])
 
 
 def _known_answer(spec, inventory):
@@ -111,14 +121,14 @@ def build_guide(technique, inventory, sources):
             spec = QUESTIONS[t["question"]]
             item, answer = _known_answer(spec, inventory)
             if answer:
-                step["condition_status"], step["condition_note"] = condition_for_answer(answer)
+                step["condition_status"], step["condition_note"] = condition_for_answer(t["question"], answer)
                 step["condition_note"] += " (from organization inventory)"
             else:
                 step["condition_status"] = "pending"
                 step["condition_note"] = "Awaiting answer to the targeted question."
                 if question is None:  # one question at a time
                     question = {"key": t["question"], "step": n, "why": spec["why"], "options": spec["options"],
-                                "text": spec["text"].format(item=item["name"] if item else "runtime agent")}
+                                "text": spec["text"].format(item=item["name"] if item else "affected service")}
         steps.append(step)
     label = LABEL if template else LABEL + " - limited guide: Canary has no detailed template for this threat"
     return {"label": label, "steps": steps, "question": question}

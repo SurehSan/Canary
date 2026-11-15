@@ -27,3 +27,13 @@ CAN-REQ-002, CAN-REQ-006.
 - Compute a visible 0–100 triage score from severity (0–25), exploitation evidence (0–25), inventory match (0–20), asset criticality (0–15), source reliability/recency (0–10), and relevant questionnaire gap (0–5); subtract 10 for a confirmed duplicate with no new material information. Map 80–100 to P1, 60–79 to P2, 35–59 to P3, and 0–34 to P4. Show factor values and source/context evidence.
 - P1 additionally requires credible active exploitation and a Confirmed match to a Critical asset; otherwise cap at P2. For the demo, hallusquatting is P2 / Possible because research describes the technique but no malicious package is tied to Fernwood. Priority is triage guidance, never evidence of exposure.
 - Authorized users may override match or priority for the current finding only, with a required reason. Overrides do not silently change the scoring rules or future assessments. Initial default routing is P1 immediate test email, P2 prompt test email, P3/P4 daily digest; all email is restricted to the CAN-REQ-009 team-owned address allowlist.
+
+## Amendment 2026-11-14: PHP2Shell demo scenario
+The demo example is now PHP2Shell, replacing the hallusquatting example above. Fernwood's billing portal runs
+PHP 8.3.30, which is inside the affected range (the fixed release for the 8.3 branch is 8.3.36), so it is a
+**Confirmed** match. Version ranges are supported.
+
+- With only third-party reports of exploitation attempts, the score is 87 (25 + 12 + 20 + 15 + 10 + 5). That is
+  in the P1 band, but the alert is **held at P2** because the P1 gate requires credible active exploitation.
+- When a primary source confirms in-the-wild exploitation, the score becomes 95 (exploitation 20), the gate is
+  met, and the alert escalates to **P1** with an immediate update notification.

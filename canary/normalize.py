@@ -16,6 +16,10 @@ TECHNIQUES = {
         "label": "Package/name hallucination squatting",
         "aliases": ["hallusquatting", "slopsquatting", "package hallucination", "hallucinated package"],
     },
+    "php2shell": {
+        "label": "PHP2Shell (PHP remote code execution)",
+        "aliases": ["php2shell", "cve-2026-109618", "cve-2026-109619"],
+    },
 }
 
 

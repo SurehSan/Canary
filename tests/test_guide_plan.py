@@ -12,7 +12,7 @@ def uid(db, name):
 
 @pytest.fixture
 def fern(client, db):
-    """Fernwood with the HalluSquatting alert collected; signed in as Sureh (Cybersecurity Lead)."""
+    """Fernwood with the PHP2Shell alert collected; signed in as Sureh (Cybersecurity Lead)."""
     f = org_id(db, FERNWOOD)
     login(client, "wyatt", org=f)
     refresh(client)
@@ -47,8 +47,8 @@ def test_guide_generated_from_alert_without_questionnaire(client, db, fern):
     g = make_guide(client, db, fern)
     assert g is not None
     page = client.get(f"/guides/{g['id']}").data.decode()
-    for text in ("AI-generated draft for human review", "Review recent lockfile", "Why it matters", "Check",
-                 "Technique", "install packages in production", "Unknown", "LLM03:2025"):
+    for text in ("AI-generated draft for human review", "Confirm the PHP version", "Why it matters", "Check",
+                 "Technique", "reachable from the internet", "Unknown", "CIS Controls v8", "8.3.36"):
         assert text in page, text
     assert db.execute("SELECT COUNT(*) FROM guide_steps WHERE guide_id=?", (g["id"],)).fetchone()[0] == 5
 
@@ -91,7 +91,7 @@ def test_step_progress_and_edit_are_audited_with_before_after(client, db, fern):
     assert s1["status"] == "in_progress"
     assert s2["action"] == "Disable auto-install in the assistant settings." and s2["edited"] == 1
     ev = db.execute("SELECT * FROM audit_events WHERE action='guide.step_edited'").fetchone()
-    assert "Turn off automatic package installation" in ev["before_state"]
+    assert "Upgrade PHP to a fixed release" in ev["before_state"]
 
 
 def test_other_org_cannot_open_guide(client, db, fern):
@@ -105,7 +105,7 @@ def test_other_org_cannot_open_guide(client, db, fern):
 # ------------------------------------------------------------------ plan (012)
 def test_plan_from_guide_uses_applicable_stages_and_owners(client, db, fern):
     p = make_plan(client, db, fern)
-    assert (p["title"], p["status"], p["version"]) == ("Malicious dependency via AI agent", "draft", 1)
+    assert (p["title"], p["status"], p["version"]) == ("Critical PHP remote code execution (PHP2Shell)", "draft", 1)
     stages = [r["stage"] for r in db.execute("SELECT DISTINCT stage FROM plan_actions WHERE plan_id=? ORDER BY position",
                                              (p["id"],))]
     assert stages == ["Detection", "Containment", "Recovery", "Review"]
@@ -144,7 +144,7 @@ def test_editing_approved_plan_returns_to_draft_and_keeps_approved_version(clien
     login(client, "wyatt", org=fern)
     client.post(f"/plans/{p['id']}/approve", data={"confirm": "yes"})
     approved = db.execute("SELECT approved_version FROM plans WHERE id=?", (p["id"],)).fetchone()[0]
-    client.post(f"/plans/{p['id']}/edit", data={"title": "Malicious dependency via AI agent (rev)", "review_date": "2027-02-01"})
+    client.post(f"/plans/{p['id']}/edit", data={"title": "Critical PHP remote code execution (PHP2Shell) (rev)", "review_date": "2027-02-01"})
     p2 = db.execute("SELECT * FROM plans WHERE id=?", (p["id"],)).fetchone()
     assert p2["status"] == "draft" and p2["version"] > approved and p2["approved_version"] == approved
     snap = db.execute("SELECT snapshot FROM plan_versions WHERE plan_id=? AND version=? AND status='approved'",
@@ -195,7 +195,8 @@ def test_questionnaire_rejects_invalid_answers(client, db, fern):
 def test_questionnaire_shows_mapping_and_explains_threat_weighting(client, db, fern):
     page = client.get("/questionnaire").data.decode()
     assert "LLM03:2025 Supply Chain" in page and "https://genai.owasp.org/llmrisk/llm032025-supply-chain/" in page
-    assert "Weighted up" in page and "HalluSquatting" in page
+    assert "Safeguard 7.4" in page and "https://www.cisecurity.org/controls/continuous-vulnerability-management" in page
+    assert "Weighted up" in page and "PHP2Shell" in page
     assert "not a compliance score" in page
 
 
