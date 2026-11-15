@@ -7,7 +7,7 @@ from canary.db import get_db
 from canary.notify import build_digest, build_message
 from tests.conftest import login, org_id, refresh
 from tests.smtp_capture import CaptureServer
-from tests.test_notifications import SUREH_ADDR, make_app
+from tests.test_notifications import KOEWEN_ADDR, make_app
 from tests.test_notify_unit import CTX
 
 DEMO_WORDS = ("Demo data", "(fictional)", "Fictional", "Demo analysis", "demo template", "Demo step",
@@ -107,11 +107,11 @@ def test_presentation_mode_emails_end_to_end(tmp_path):
         with app.app_context():
             db = get_db()
             login(c, "wyatt", org=org_id(db, "Fernwood Labs"))
-            sureh = db.execute("SELECT id FROM users WHERE username='sureh'").fetchone()["id"]
-            c.post("/notifications/recipients", data={"user_id": sureh, "email": SUREH_ADDR})
+            koewen = db.execute("SELECT id FROM users WHERE username='koewen'").fetchone()["id"]
+            c.post("/notifications/recipients", data={"user_id": koewen, "email": KOEWEN_ADDR})
             refresh(c)
             c.post("/notifications/process")
-            c.post("/notifications/test", data={"email": SUREH_ADDR})
+            c.post("/notifications/test", data={"email": KOEWEN_ADDR})
         subjects = [m["msg"]["Subject"] for m in smtp.messages]
         assert subjects[0].startswith("[Canary · Test] P2") and subjects[1].startswith("[Canary · Test] Delivery check")
     finally:

@@ -48,7 +48,7 @@ ORGS = {
                  owner_team="Engineering", criticality="Unknown", capabilities=["package_registry"]),
         ],
         "assessment": {"dep-review": "No", "patch-sla": "No"},
-        "routes": [("cybersecurity", "sureh")],
+        "routes": [("cybersecurity", "koewen")],
     },
     "Prairie Valley Medical Center": {
         "industry": "Healthcare", "size": "Unknown", "location": "Unknown",

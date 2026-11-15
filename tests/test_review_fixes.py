@@ -72,8 +72,8 @@ def test_cdx2_smtp_error_text_is_not_persisted_or_shown(tmp_path, monkeypatch):
         with app.app_context():
             db = get_db()
             login(client, "wyatt", org=org_id(db, FERNWOOD))
-            sureh = db.execute("SELECT id FROM users WHERE username='sureh'").fetchone()["id"]
-            client.post("/notifications/recipients", data={"user_id": sureh, "email": "sureh-test@team.example"})
+            koewen = db.execute("SELECT id FROM users WHERE username='koewen'").fetchone()["id"]
+            client.post("/notifications/recipients", data={"user_id": koewen, "email": "koewen-test@team.example"})
             refresh(client)
             client.post("/notifications/process")
             n = db.execute("SELECT * FROM notifications").fetchone()

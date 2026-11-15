@@ -25,7 +25,7 @@ don't claim that Fernwood was attacked or compromised.
 3. Open **three browser windows**:
    - **Window A** (normal): http://127.0.0.1:5000, signed in as `wyatt`.
    - **Window B** (private/incognito): the same URL, signed in as `sureh`.
-   - **Window C**: the inbox `.env` maps to Sureh (`CANARY_TEST_RECIPIENTS`),
+   - **Window C**: the inbox `.env` maps to Koewen (`CANARY_TEST_RECIPIENTS`),
      with the Junk folder one click away.
 4. Do a quick test: in Window A, go to Notifications → **Send delivery check** to
    that inbox and confirm it arrives. Then reset again (step 2) and sign both
@@ -41,7 +41,7 @@ don't claim that Fernwood was attacked or compromised.
 | 1:00 | A | **Sources** → **Refresh sources now** | "Curated public sources: the PHP project, GitHub's advisory database, and security news. Collection runs separately from notifications. Each source shows its real outcome; an outage shows as **Failed**, never as an empty success." |
 | 1:30 | A | **Alerts** → open the **PHP2Shell** alert | "Four reports become one finding. The PHP advisory is the primary record. GitHub's two advisories attach automatically, because the CVE numbers match exactly. The news article only matches by name, so it's a *proposed* grouping that a person confirms." |
 | 2:00 | A | Scroll to **Why this may matter** and **Priority factors** | "It's a **Confirmed match**: 8.3.30 is below 8.3.36, the fix for that branch. The score is **87 out of 100**, which is in P1 range, but it's held at **P2 High**. P1 requires *confirmed* active exploitation, and right now there are only third-party reports of attempts, flagged here as unverified. Every point is explained, and a score is triage, not proof the portal was attacked." |
-| 3:00 | A | **Notifications** → **Run processing cycle (P1/P2)** | "The P2 alert goes to Sureh, the Cybersecurity Lead. Only approved addresses can receive email." |
+| 3:00 | A | **Notifications** → **Run processing cycle (P1/P2)** | "The P2 alert goes to Koewen, the Cybersecurity Lead who owns the platform. Only approved addresses can receive email." |
 | 3:15 | C | Refresh the inbox and open the email | "The P2 email: priority, why it matters to Fernwood, what's known and unknown, and the source links." |
 | 3:40 | A | **Sources** → **Presenter tools** → **Deliver later exploitation report (Check Point)** | "Now it's November 12. Check Point publishes an advisory confirming real attacks." |
 | 4:00 | A | Open the alert again | "Canary escalates on its own: **P1 Critical, 95 out of 100**. The P1 rule is now met, because exploitation is confirmed *and* this is a confirmed match on a critical system. It's marked **Updated evidence**." |

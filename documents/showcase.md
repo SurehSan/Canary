@@ -24,7 +24,7 @@ on servers running PHP 5.4–8.5. PHP fixed them on 21 Oct 2026 (8.5.12, 8.4.27,
 | Fernwood Labs | Startup whose customer billing portal runs **PHP 8.3.30** | — |
 
 All passwords are `demo`. Have the email inbox open in a third window: the alert
-goes to the address `.env` maps to **Sureh** (`CANARY_TEST_RECIPIENTS`). To have it
+goes to the address `.env` maps to **Koewen** (`CANARY_TEST_RECIPIENTS`). To have it
 reach a second person as well, give them an address and add a routing rule for
 them under **Notifications → Recipients and routing** *before* step 3.
 
@@ -164,7 +164,7 @@ step ahead the whole way."
 - Open a new terminal, then run `python run.py --reset` and `python run.py` (a
   fresh demo state).
 - Open three windows: Wyatt (normal), Sureh (private/incognito), and the inbox
-  mapped to Sureh in `.env`. Add any extra routing rules now; a reset clears them.
+  mapped to Koewen in `.env`. Add any extra routing rules now; a reset clears them.
 - Check that the alert reads **87/100, P2 High** after Refresh. If it says 95/P1,
   the Check Point report was already delivered: reset.
 - Rehearse once: the whole path takes about 5 minutes once you know the clicks.

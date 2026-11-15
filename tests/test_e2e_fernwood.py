@@ -2,7 +2,7 @@
 from canary.db import get_db
 from tests.conftest import login, org_id
 from tests.smtp_capture import CaptureServer
-from tests.test_notifications import SUREH_ADDR, make_app
+from tests.test_notifications import KOEWEN_ADDR, make_app
 
 
 def test_full_fernwood_walkthrough(tmp_path):
@@ -22,7 +22,7 @@ def test_full_fernwood_walkthrough(tmp_path):
             assert "Demo data" in org and "8.3.30" in org and "Cybersecurity Lead" in org
 
             # 2. Sources + refresh; 3. normalize/dedup
-            c.post("/notifications/recipients", data={"user_id": uid["sureh"], "email": SUREH_ADDR})
+            c.post("/notifications/recipients", data={"user_id": uid["koewen"], "email": KOEWEN_ADDR})
             c.post("/sources/refresh")
             alert = db.execute("SELECT id FROM alerts WHERE org_id=?", (fern,)).fetchone()["id"]
             assert db.execute("SELECT COUNT(*) FROM source_items").fetchone()[0] == 4

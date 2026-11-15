@@ -7,7 +7,7 @@ import pytest
 from canary.db import get_db
 from tests.conftest import login, org_id
 from tests.smtp_capture import CaptureServer
-from tests.test_notifications import SUREH_ADDR, make_app
+from tests.test_notifications import KOEWEN_ADDR, make_app
 
 FERNWOOD, PRAIRIE = "Fernwood Labs", "Prairie Valley Medical Center"
 NEW_ADDR = "teammate@team.example"
@@ -82,7 +82,7 @@ def test_duplicate_or_env_address_is_refused(ctx):
     login(client, "wyatt", org=org_id(db, FERNWOOD))
     add(client)
     assert add(client).status_code == 400
-    assert add(client, SUREH_ADDR).status_code == 400  # already allowed by .env
+    assert add(client, KOEWEN_ADDR).status_code == 400  # already allowed by .env
 
 
 def test_lead_cannot_change_the_allowlist(ctx):
@@ -121,7 +121,7 @@ def test_env_addresses_are_listed_but_not_removable(ctx):
     client, db, _ = ctx
     login(client, "wyatt", org=org_id(db, FERNWOOD))
     page = client.get("/notifications").data.decode()
-    assert SUREH_ADDR in page and "From local configuration (.env)" in page
+    assert KOEWEN_ADDR in page and "From local configuration (.env)" in page
 
 
 def test_permitted_domains_default_to_the_env_allowlist_domains(tmp_path, smtp):

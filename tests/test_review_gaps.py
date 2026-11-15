@@ -77,11 +77,11 @@ def smtp():
     s.close()
 
 
-def _fernwood_with_sureh(app, client, db, addr):
+def _fernwood_with_koewen(app, client, db, addr):
     fern = org_id(db, FERNWOOD)
     login(client, "wyatt", org=fern)
-    sureh = db.execute("SELECT id FROM users WHERE username='sureh'").fetchone()["id"]
-    client.post("/notifications/recipients", data={"user_id": sureh, "email": addr})
+    koewen = db.execute("SELECT id FROM users WHERE username='koewen'").fetchone()["id"]
+    client.post("/notifications/recipients", data={"user_id": koewen, "email": addr})
     refresh(client)
     return fern, db.execute("SELECT id FROM alerts WHERE org_id=?", (fern,)).fetchone()["id"]
 
@@ -91,7 +91,7 @@ def test_retry_of_rejected_message_still_never_connects(tmp_path, smtp):
     c = app.test_client()
     with app.app_context():
         db = get_db()
-        _fernwood_with_sureh(app, c, db, "outsider@else.example")
+        _fernwood_with_koewen(app, c, db, "outsider@else.example")
         c.post("/notifications/process")
         n = db.execute("SELECT id FROM notifications").fetchone()["id"]
         c.post(f"/notifications/{n}/retry")
@@ -104,7 +104,7 @@ def test_digest_to_unlisted_address_never_connects(tmp_path, smtp):
     c = app.test_client()
     with app.app_context():
         db = get_db()
-        _, alert = _fernwood_with_sureh(app, c, db, "outsider@else.example")
+        _, alert = _fernwood_with_koewen(app, c, db, "outsider@else.example")
         c.post(f"/alerts/{alert}/override", data={"priority": "P3", "reason": "digest check"})
         c.post("/notifications/digest")
         statuses = [r[0] for r in db.execute("SELECT status FROM notifications WHERE cadence='digest'")]
@@ -116,7 +116,7 @@ def test_digest_batch_retry_updates_every_message_in_the_batch(tmp_path, smtp):
     c = app.test_client()
     with app.app_context():
         db = get_db()
-        fern, alert = _fernwood_with_sureh(app, c, db, "sureh-test@team.example")
+        fern, alert = _fernwood_with_koewen(app, c, db, "koewen-test@team.example")
         # Two different alerts in one digest: undoing the proposed news grouping gives the article its own alert.
         news = db.execute("SELECT id FROM source_items WHERE group_status='proposed'").fetchone()["id"]
         c.post(f"/alerts/{alert}/grouping/{news}/undo")

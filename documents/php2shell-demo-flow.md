@@ -123,7 +123,7 @@ met, and the alert becomes **P1 Critical**, marked "Updated evidence".
 
 ### 6. Real test email: CAN-REQ-009
 
-The cybersecurity-category alert routes to Sureh's test inbox.
+The cybersecurity-category alert routes to Koewen's test inbox.
 
 - At step 5a it's a **P2**, sent on the next processing cycle
   (**Run processing cycle**).

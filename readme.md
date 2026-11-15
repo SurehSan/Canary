@@ -249,7 +249,7 @@ Presenter script: [documents/demo-script.md](documents/demo-script.md).
    why it's held at P2 (the P1 gate needs confirmed exploitation), the
    source-supported claims with citations, the organization context, the
    unknowns, the interpretation, and the **unverified** exploitation note.
-6. **Notifications → Run processing cycle**: the P2 email goes to Sureh's
+6. **Notifications → Run processing cycle**: the P2 email goes to Koewen's
    allowlisted address (or shows as Blocked or Rejected). **Send delivery check**
    to an address off the allowlist is rejected before sending.
 7. **Presenter tools → Deliver later exploitation report (Check Point)**: a fifth
