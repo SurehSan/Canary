@@ -10,48 +10,62 @@ priority; the analysis supplies classified inputs and never asserts exposure.
 REQUIRED_SECTIONS = ("what_happened", "source_supported", "org_context", "unknowns",
                      "interpretation", "conflicts")
 
-THN_URL = "https://thehackernews.com/2026/07/new-hallusquatting-attack-could-trick.html"
-CSA_URL = ("https://labs.cloudsecurityalliance.org/wp-content/uploads/2026/04/"
-           "CSA_research_note_slopsquatting-ai-supply-chain_20260419-csa-styled-1.pdf")
-XYGENI_URL = "https://xygeni.io/blog/slopsquatting-evolution/"
+from .fixtures import CHECK_POINT_URL, GHSA_OOM_URL, GHSA_STATE_URL, PHP_NET_URL, THN_URL
 
-# Curated, manually checked claims for the seeded technique, keyed by source URL.
+PHP_AFFECTED = [">=5.4.0,<8.2.0", ">=8.2.0,<8.2.35", ">=8.3.0,<8.3.36", ">=8.4.0,<8.4.27", ">=8.5.0,<8.5.12"]
+
+# Curated, manually checked claims for the seeded finding, keyed by source URL (checked 2026-11-14).
 CURATED = {
-    "package-hallucination-squatting": {
-        "title": "HalluSquatting: hallucinated package names used to hijack AI coding agents",
-        "event_type": "AI supply-chain attack technique",
-        "impact_class": "code_execution_no_cvss",
-        "exploitation_status": "research_demonstrated",
-        "exploitation_reason": ("Technique demonstrated by researchers with harmless payloads; THN reports no "
-                                "in-the-wild HalluSquatting exploitation. Nothing ties a malicious package to this organization."),
-        "what_happened": "Researchers showed AI coding assistants can be led to fetch and run attacker-registered "
-                         "code under names that models commonly hallucinate.",
+    "php2shell": {
+        "title": "PHP2Shell: unauthenticated remote code execution in PHP (CVE-2026-109618, CVE-2026-109619)",
+        "event_type": "Software vulnerability (unauthenticated remote code execution)",
+        "impact_class": "critical_cvss",
+        "affected_products": [{"product_key": "php", "versions": PHP_AFFECTED}],
+        # First matching rule wins: exploitation status depends on which sources have been collected.
+        "exploitation": [
+            {"if_any": [CHECK_POINT_URL], "status": "active_in_wild",
+             "reason": "Check Point reports confirmed in-the-wild exploitation of PHP2Shell between October 30 and "
+                       "November 4, 2026. Nothing ties an attack to this organization."},
+            {"if_any": [THN_URL], "status": "claimed_in_wild_unverified",
+             "reason": "News coverage reports exploitation attempts attributed to third parties (Cloudflare, "
+                       "watchTowr); no primary source has confirmed exploitation yet. Nothing ties an attack to "
+                       "this organization."},
+        ],
+        "exploitation_default": ("unknown", "The collected advisories do not report exploitation."),
+        "what_happened": "The PHP project fixed two critical memory-safety flaws that let an unauthenticated "
+                         "attacker run code on servers running PHP 5.4 through 8.5.",
         "claims": [
-            (CSA_URL, "Language models can produce package names that do not exist."),
-            (CSA_URL, "Attackers can pre-register those hallucinated names on public registries such as npm and PyPI."),
-            (THN_URL, "An AI coding agent that fetches an attacker-registered resource may run the attacker's code."),
-            (THN_URL, "No CVE applies; the weakness is in how agents trust names."),
-            (XYGENI_URL, "Earlier hallucinated npm package names continued to receive install attempts from agents in 2026."),
+            (PHP_NET_URL, "PHP 8.5.12, 8.4.27, 8.3.36 and 8.2.35 fix two critical vulnerabilities (CVE-2026-109618, "
+                          "CVE-2026-109619) that can allow unauthenticated remote code execution."),
+            (PHP_NET_URL, "The PHP project says there are no complete mitigations; updating is the only safe choice."),
+            (PHP_NET_URL, "PHP 8.1 and older no longer receive updates from the PHP project."),
+            (GHSA_OOM_URL, "CVE-2026-109618: out-of-memory handling can interrupt PHP while request data is only "
+                           "partially initialized, and cleanup may then treat the invalid data as valid."),
+            (GHSA_STATE_URL, "CVE-2026-109619: request-owned internal state can survive after its memory is freed and "
+                             "be used by a later request on the same worker."),
+            (CHECK_POINT_URL, "Check Point reports active in-the-wild exploitation between October 30 and November 4, "
+                              "2026, used for initial access to internet-facing gateways."),
+            (CHECK_POINT_URL, "Check Point says a couple of dozen unpatched systems, in a single region, were "
+                              "compromised in the incidents it observed."),
         ],
         "conflicts": [
-            {"topic": "In-the-wild exploitation",
-             "statement": "The CSA research note asserts real-world malicious slopsquatting packages with many downloads, "
-                          "while The Hacker News reports no in-the-wild exploitation of HalluSquatting specifically. "
-                          "The CSA note is self-labeled unofficial AI-assisted research. Treated as unverified.",
-             "sources": [CSA_URL, THN_URL]},
+            {"topic": "Exploitation in the wild", "sources": [THN_URL], "unless_any": [CHECK_POINT_URL],
+             "statement": "The Hacker News reports exploitation attempts attributed to Cloudflare and watchTowr, but "
+                          "no break-in of a specific server had been confirmed and the PHP advisories do not mention "
+                          "exploitation. Treated as unverified until a primary source confirms it."},
         ],
         "unknowns": [
-            "No specific malicious package is tied to this organization.",
-            "Whether any malicious package was installed has not been established.",
-            "Affected product versions: not specified by sources (technique-level finding).",
+            "Whether this organization's systems were targeted or compromised has not been established.",
+            "Whether the portal's PHP build includes a vendor backport of the fix has not been checked.",
         ],
         "interpretation": [
-            "Automatic dependency installation by AI agents is a relevant risk factor for investigation.",
+            "An internet-facing service on a PHP version inside the affected range should be treated as urgent "
+            "patch work.",
             "This is a triage recommendation, not evidence of exposure or compromise.",
         ],
         "industries": [],
-        "technique_tags": ["auto_install_packages", "agent_runtime"],
-        "owasp": "LLM03:2025 Supply Chain",
+        "technique_tags": [],
+        "framework": "CIS Controls v8, Safeguard 7.4 (application patch management)",
     },
 }
 
@@ -71,7 +85,13 @@ def build_demo_analysis(finding, source_items, match):
         claims = [{"text": text, "citations": [by_url[url]]} for url, text in spec["claims"] if url in by_url]
         conflicts = [{"topic": c["topic"], "statement": c["statement"],
                       "citations": [by_url[u] for u in c["sources"] if u in by_url]}
-                     for c in spec["conflicts"] if all(u in by_url for u in c["sources"])]
+                     for c in spec["conflicts"]
+                     if all(u in by_url for u in c["sources"]) and not any(u in by_url for u in c.get("unless_any", []))]
+        status, reason = spec.get("exploitation_default", ("unknown", "No exploitation evidence analyzed."))
+        for rule in spec.get("exploitation", []):
+            if any(u in by_url for u in rule["if_any"]):
+                status, reason = rule["status"], rule["reason"]
+                break
         analysis = {
             "what_happened": [spec["what_happened"]],
             "source_supported": claims,
@@ -81,9 +101,9 @@ def build_demo_analysis(finding, source_items, match):
             "conflicts": conflicts,
             "event_type": spec["event_type"],
             "impact_class": spec["impact_class"],
-            "exploitation_status": spec["exploitation_status"],
-            "exploitation_reason": spec["exploitation_reason"],
-            "owasp": spec["owasp"],
+            "exploitation_status": status,
+            "exploitation_reason": reason,
+            "framework": spec.get("framework"),
         }
     else:
         # Untrusted text is only cited by reference; it is not summarized or obeyed.
@@ -100,7 +120,7 @@ def build_demo_analysis(finding, source_items, match):
             "impact_class": "unknown",
             "exploitation_status": "unknown",
             "exploitation_reason": "No exploitation evidence analyzed.",
-            "owasp": None,
+            "framework": None,
         }
     analysis.update(provider="demo", label="Demo analysis (deterministic) — AI-generated draft for human review")
     validate_analysis(analysis, ids)

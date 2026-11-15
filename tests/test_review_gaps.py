@@ -64,7 +64,7 @@ def test_route_matrix_left_fernwood_records_unchanged(client, db, fern_records):
         client.get(url) if method == "get" else client.post(url, data={"reason": "x", "confirm": "yes", "title": "hijack"})
     assert db.execute("SELECT status FROM alerts WHERE id=?", (fern_records["alert"],)).fetchone()[0] == "new"
     plan = db.execute("SELECT title, status FROM plans WHERE id=?", (fern_records["plan"],)).fetchone()
-    assert (plan["title"], plan["status"]) == ("Malicious dependency via AI agent", "draft")
+    assert (plan["title"], plan["status"]) == ("Critical PHP remote code execution (PHP2Shell)", "draft")
     assert db.execute("SELECT status FROM memberships WHERE user_id=?", (fern_records["koewen"],)).fetchone()[0] == "active"
     assert db.execute("SELECT COUNT(*) FROM findings").fetchone()[0] == 1
 
@@ -116,10 +116,15 @@ def test_digest_batch_retry_updates_every_message_in_the_batch(tmp_path, smtp):
     c = app.test_client()
     with app.app_context():
         db = get_db()
-        _, alert = _fernwood_with_sureh(app, c, db, "sureh-test@team.example")
+        fern, alert = _fernwood_with_sureh(app, c, db, "sureh-test@team.example")
+        # Two different alerts in one digest: undoing the proposed news grouping gives the article its own alert.
+        news = db.execute("SELECT id FROM source_items WHERE group_status='proposed'").fetchone()["id"]
+        c.post(f"/alerts/{alert}/grouping/{news}/undo")
         c.post("/notifications/process")
-        c.post(f"/alerts/{alert}/override", data={"priority": "P3", "reason": "first"})
-        c.post(f"/alerts/{alert}/override", data={"priority": "P3", "match_state": "industry_only", "reason": "second"})
+        alerts = [r["id"] for r in db.execute("SELECT id FROM alerts WHERE org_id=? ORDER BY id", (fern,))]
+        assert len(alerts) == 2
+        for n, a in enumerate(alerts):
+            c.post(f"/alerts/{a}/override", data={"priority": "P3", "reason": f"digest check {n}"})
         c.post("/notifications/simulate-failure")
         c.post("/notifications/digest")
         batch = db.execute("SELECT id, status, digest_batch FROM notifications WHERE cadence='digest'").fetchall()

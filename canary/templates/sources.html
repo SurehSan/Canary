@@ -69,8 +69,8 @@
   <div class="row-between"><h2>Recently collected items</h2>
     {% if g.role == 'admin' and not presentation %}
     <form method="post" action="{{ url_for('main.followup_evidence') }}">
-      <button class="btn small" {{ 'disabled' if followup_done or not followup_ready }}>Demo step: deliver later follow-up report (Xygeni)</button></form>
-    {% if not followup_ready and not followup_done %}<span class="small muted">Refresh sources first: this step adds evidence to the HalluSquatting finding.</span>{% endif %}
+      <button class="btn small" {{ 'disabled' if followup_done or not followup_ready }}>Demo step: deliver later exploitation report (Check Point)</button></form>
+    {% if not followup_ready and not followup_done %}<span class="small muted">Refresh sources first: this step adds evidence to the PHP2Shell finding.</span>{% endif %}
     {% endif %}</div>
   <p class="small muted">Stored per item: link, title, publication date when supplied, retrieval time, and a short excerpt. Full articles are not stored.
     {% if presentation %}Collected evidence is shared by every organization that receives the same finding.{% else %}Collected evidence is shared: the follow-up demo step attaches a report to the shared finding, which affects every organization that receives that finding.{% endif %}</p>
@@ -97,8 +97,8 @@
   </div>
   <h3>Follow-up evidence</h3>
   <form method="post" action="{{ url_for('main.followup_evidence') }}">
-    <button class="btn small" {{ 'disabled' if followup_done or not followup_ready }}>Deliver later follow-up report (Xygeni)</button></form>
-  {% if not followup_ready and not followup_done %}<p class="small muted">Refresh sources first: this adds evidence to the HalluSquatting finding.</p>{% endif %}
+    <button class="btn small" {{ 'disabled' if followup_done or not followup_ready }}>Deliver later exploitation report (Check Point)</button></form>
+  {% if not followup_ready and not followup_done %}<p class="small muted">Refresh sources first: this adds evidence to the PHP2Shell finding.</p>{% endif %}
 </details>
 {% endif %}
 {% endblock %}

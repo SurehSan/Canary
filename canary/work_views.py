@@ -93,7 +93,7 @@ def answer_guide_question(guide_id):
     answer = request.form.get("answer", "")
     if q is None or answer not in json.loads(q["options"]) + ["Not applicable"]:
         abort(400, description="Choose one of the offered answers.")
-    status, note = condition_for_answer(answer)
+    status, note = condition_for_answer(q["key"], answer)
     ts = now_iso()
     db.execute("UPDATE guide_questions SET answer=?, answered_by=?, answered_at=? WHERE id=?",
                (answer, g.user["id"], ts, q["id"]))

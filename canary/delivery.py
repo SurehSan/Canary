@@ -97,6 +97,11 @@ def enqueue_for_alert(conn, alert_id, kind, change=None, actor_label="System not
                           "Unchanged since the last notification (no material change).", ts, ts))
             continue
         msg_kind = "update" if last else kind
+        # A newer message replaces anything still queued for this alert and person, so a stale P2 can't go out
+        # after a P1 escalation.
+        conn.execute("UPDATE notifications SET status='suppressed', error=?, updated_at=?"
+                     " WHERE alert_id=? AND user_id=? AND status='pending'",
+                     ("Superseded by a newer notification for this alert.", ts, alert_id, uid))
         subject, body = build_message(dict(ctx, kind=msg_kind, change=change), presentation=presenting())
         queued.append(conn.execute(
             "INSERT INTO notifications (org_id, alert_id, user_id, kind, cadence, priority, fingerprint, change_summary,"

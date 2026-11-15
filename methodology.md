@@ -9,7 +9,7 @@ every task, instead of coming together at the last minute.
 ## 1. Build one thin end-to-end path first
 
 - Before polishing anything, get the
-  [Fernwood demo flow](documents/hallusquatting-demo-flow.md) running from
+  [Fernwood demo flow](documents/php2shell-demo-flow.md) running from
   start to finish with stubs:
   - a hardcoded organization
   - one RSS source

@@ -23,7 +23,7 @@ Demonstrate Canary's end-to-end value with a realistic workflow without misleadi
 CAN-REQ-001 through CAN-REQ-015.
 
 ## Prototype design decisions
-- Run the demo locally and seed Fernwood Labs as the primary walkthrough organization, following `documents/hallusquatting-demo-flow.md`. Prairie Valley Medical Center may be included as a second fictional sample to demonstrate another organization context; it is not the primary flow.
+- Run the demo locally and seed Fernwood Labs as the primary walkthrough organization, following `documents/php2shell-demo-flow.md`. Prairie Valley Medical Center may be included as a second fictional sample to demonstrate another organization context; it is not the primary flow.
 - Use the hallusquatting sources and preserve their original links and publication dates. Treat claims according to the cited sources; label any invented Fernwood assets, package events, and outcomes as fictional/simulated. Do not alter a real source's claims.
 - Provide a visible “Demo data” banner and distinguish simulated/sample records from collected source records. Provide a full reset to restore the seeded state and remove user changes.
 - Demonstrate all CAN-REQ-001–015 in the walkthrough or through an adjacent screen/state: accounts and roles, organization/inventory, source settings and status, collection, normalization/evidence/deduplication, analysis, relevance/priority, alert triage, mock notification, questionnaire, guide, human-approved plan, dashboard, audit history, and privacy/data safeguards.
@@ -40,3 +40,12 @@ Truthfulness text stays in both modes: "AI-generated draft for human review", "a
 exposure", "approval executes nothing", and "Simulated" markers on presenter-triggered failures. The default
 (off) keeps every label this requirement specifies. When presentation mode is used, the presenter states once,
 out loud, that the workspace and people are fictional (see documents/demo-script.md).
+
+## Amendment 2026-11-14: PHP2Shell demo scenario
+At the team's request, the seeded walkthrough uses the real **PHP2Shell** vulnerability (CVE-2026-109618,
+CVE-2026-109619) instead of hallusquatting; see `documents/php2shell-demo-flow.md`.
+
+- **Sources (checked 2026-11-14):** the php.net advisory, the two php-src GitHub advisories, The Hacker News (21
+  Oct 2026), and Check Point's 12 Nov 2026 advisory confirming in-the-wild exploitation (the follow-up evidence).
+  Their titles, links, and dates are preserved, and their claims are not altered.
+- **Fictional details:** Fernwood's billing portal and its PHP version are fictional demo context.

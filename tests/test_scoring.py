@@ -1,7 +1,7 @@
 """CAN-REQ-007: match state and priority rubric (pure logic)."""
 from datetime import date
 
-from canary.scoring import match_state, score_priority
+from canary.scoring import match_state, score_priority, version_affected
 
 CODING_ASSISTANT = {"id": 1, "name": "AI coding assistant", "product_key": "coding-assistant",
                     "version": "2.4", "capabilities": ["ai_coding_agent", "auto_install_packages"],
@@ -61,7 +61,7 @@ SEEDED_INPUTS = dict(
 )
 
 
-def test_seeded_hallusquatting_scores_65_p2_with_documented_factors():
+def test_baseline_technique_case_scores_65_p2_with_documented_factors():
     result = score_priority(**SEEDED_INPUTS)
     pts = {f["key"]: f["points"] for f in result["factors"]}
     assert pts == {"severity": 16, "exploitation": 8, "inventory_match": 12,
@@ -103,3 +103,57 @@ def test_duplicate_without_new_information_subtracts_ten():
     result = score_priority(**dict(SEEDED_INPUTS, duplicate_without_new_info=True))
     assert result["score"] == 55
     assert result["priority"] == "P3"
+
+
+# ------------------------------------------------------------------ PHP2Shell demo scenario (version ranges, P1 gate)
+PHP_RANGES = [">=5.4.0,<8.2.0", ">=8.2.0,<8.2.35", ">=8.3.0,<8.3.36", ">=8.4.0,<8.4.27", ">=8.5.0,<8.5.12"]
+PORTAL = {"id": 9, "name": "Customer billing portal (PHP-FPM)", "product_key": "php", "version": "8.3.30",
+          "capabilities": ["php"], "criticality": "Critical"}
+PHP2SHELL = {"affected_products": [{"product_key": "php", "versions": PHP_RANGES}], "technique_tags": [],
+             "industries": []}
+
+
+def test_version_ranges_follow_the_fixed_release_on_each_branch():
+    affected = ["8.3.30", "8.3.35", "8.4.26", "8.5.11", "8.2.34", "8.1.31", "7.4.33", "5.4.0"]
+    fixed = ["8.3.36", "8.3.40", "8.4.27", "8.5.12", "8.2.35", "5.3.29", "8.6.0"]
+    assert all(version_affected(v, PHP_RANGES) for v in affected)
+    assert not any(version_affected(v, PHP_RANGES) for v in fixed)
+
+
+def test_exact_version_lists_still_work():
+    assert version_affected("2.4", ["2.4", "2.5"]) and not version_affected("2.6", ["2.4", "2.5"])
+
+
+def test_known_affected_php_version_is_a_confirmed_match():
+    result = match_state(PHP2SHELL, [PORTAL], "Software")
+    assert result["state"] == "confirmed" and "8.3.30" in result["evidence"][0]["reason"]
+
+
+def test_patched_php_version_is_not_a_match():
+    assert match_state(PHP2SHELL, [dict(PORTAL, version="8.3.36")], "Software")["state"] == "no_match"
+
+
+def test_unknown_php_version_is_only_possible():
+    assert match_state(PHP2SHELL, [dict(PORTAL, version=None)], "Software")["state"] == "possible"
+
+
+PHP_INITIAL = dict(
+    impact_class="critical_cvss", exploitation_status="claimed_in_wild_unverified", match_state="confirmed",
+    criticalities=["Critical"], as_of=date(2026, 11, 14), questionnaire_answer="No", duplicate_without_new_info=False,
+    sources=[{"tier": "A", "published_at": "2026-10-21"}, {"tier": "A", "published_at": "2026-10-21"},
+             {"tier": "A", "published_at": "2026-10-21"}, {"tier": "B", "published_at": "2026-10-21"}],
+)
+
+
+def test_php2shell_before_confirmed_exploitation_scores_87_but_is_capped_at_p2():
+    result = score_priority(**PHP_INITIAL)
+    pts = {f["key"]: f["points"] for f in result["factors"]}
+    assert (pts["severity"], pts["exploitation"], pts["inventory_match"], pts["asset_criticality"],
+            pts["source_reliability"], pts["questionnaire_gap"]) == (25, 12, 20, 15, 10, 5)
+    assert result["score"] == 87 and result["priority"] == "P2" and result["p1_gate_met"] is False
+
+
+def test_php2shell_after_confirmed_exploitation_is_p1():
+    result = score_priority(**dict(PHP_INITIAL, exploitation_status="active_in_wild",
+                                   sources=PHP_INITIAL["sources"] + [{"tier": "B", "published_at": "2026-11-12"}]))
+    assert result["score"] == 95 and result["priority"] == "P1" and result["p1_gate_met"] is True

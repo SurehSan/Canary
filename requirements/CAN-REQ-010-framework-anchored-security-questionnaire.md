@@ -26,3 +26,9 @@ CAN-REQ-001, CAN-REQ-002.
 - Pin the prototype's concise question set to OWASP Top 10 for LLM Applications (2025 edition) so the hallusquatting demo's explicit LLM03 Supply Chain mapping stays stable. Include cited mappings and plain-language explanations; do not imply that this is a complete framework assessment. A later framework update is a separately reviewed design change, not an automatic remapping.
 - Use Yes / No / Partial / Unknown / Not applicable answers. Save respondent and assessment date; allow a new assessment without overwriting prior answers. No automatic reassessment schedule: show a reminder/date field only.
 - Do not produce a compliance score. Show answered control gaps and their threat-related recommendation weight transparently; changes in weighting never rewrite the user's answer.
+
+## Amendment 2026-11-14: PHP2Shell demo scenario
+The question set adds one non-LLM question for the demo: "Are critical security patches applied to
+internet-facing systems within 72 hours?", mapped to **CIS Critical Security Controls v8, Safeguard 7.4**
+(application patch management). Fernwood's initial assessment answers **No**. It drives the questionnaire-gap
+factor for PHP2Shell and the explained threat weighting. The OWASP LLM questions are unchanged.

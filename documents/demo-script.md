@@ -1,70 +1,70 @@
 # Canary Demo Script
 
 A click-by-click script for presenting the local Canary prototype. It follows
-the [Fernwood demo flow](hallusquatting-demo-flow.md). The main path runs
-**about 8 minutes**; a **3-minute** cut is at the end.
+the [Fernwood demo flow](php2shell-demo-flow.md), built around the real
+**PHP2Shell** vulnerability. The main path runs **about 8 minutes**; a
+**3-minute** cut is at the end.
 
-Everything about Fernwood Labs and its people is fictional. The HalluSquatting
-sources are real. Say so once at the start, and don't claim that Fernwood was
-exposed or compromised.
+Fernwood Labs, its people, and its systems are fictional. The PHP2Shell
+vulnerability and every linked source are real. Say so once at the start, and
+don't claim that Fernwood was attacked or compromised.
 
 ## Before the demo (10 minutes ahead)
 
 1. In the project folder, confirm that `.env` has the Gmail sender settings and
    App Password, and that `CANARY_SCHEDULER=0` and `CANARY_PRESENTATION_MODE=1`
-   are set. With the scheduler off, email goes out only when you click **Run
-   processing cycle**, so you control the timing. Presentation mode makes the app
-   look like a real product: there's no demo banner or "fictional" tags, the
-   sign-in page doesn't list the test accounts (they're below, and every password
-   is `demo`), and the scripted events (outages, the follow-up report, delivery
-   failure) are in a collapsed **Presenter tools** panel at the bottom of Sources
-   and Notifications, visible to Administrators only.
-2. Run `python run.py --reset`, then `python run.py`. Leave the terminal open.
+   are set. With the scheduler off, P2 email goes out only when you click **Run
+   processing cycle**, so you control the timing. (P1 email always goes out
+   immediately.) Presentation mode hides the demo labels. The scripted events
+   (the Check Point report, outages, delivery failure) are in a collapsed
+   **Presenter tools** panel at the bottom of Sources and Notifications, visible
+   to Administrators only. The sign-in page doesn't list accounts: use `wyatt`
+   and `sureh`, and every password is `demo`.
+2. Open a new terminal (VS Code loads `.env` into new terminals), then run
+   `python run.py --reset` and `python run.py`. Leave the terminal open.
 3. Open **three browser windows**:
-   - **Window A** (normal): http://127.0.0.1:5000, signed in as `wyatt` (password `demo`).
-   - **Window B** (private/incognito): the same URL, signed in as `sureh`. Two
-     people can't share one browser session, so this window needs to be
-     private.
-   - **Window C**: the DSU inbox (`koewen.hoffman@trojans.dsu.edu`), with the
-     Junk folder one click away.
+   - **Window A** (normal): http://127.0.0.1:5000, signed in as `wyatt`.
+   - **Window B** (private/incognito): the same URL, signed in as `sureh`.
+   - **Window C**: the inbox `.env` maps to Sureh (`CANARY_TEST_RECIPIENTS`),
+     with the Junk folder one click away.
 4. Do a quick test: in Window A, go to Notifications → **Send delivery check** to
-   the DSU address and confirm it arrives. Then run `python run.py --reset`
-   again and sign both windows back in, so the demo starts clean.
+   that inbox and confirm it arrives. Then reset again (step 2) and sign both
+   windows back in, so the demo starts clean.
 5. Zoom both app windows to about 125% so the room can read them.
 
 ## Main path (about 8 minutes)
 
 | Time | Window | Do | Say |
 |---|---|---|---|
-| 0:00 | — | — | "AI tools ship faster than teams can secure them. In February, Cline disclosed that its AI issue-triage bot could be hijacked through a GitHub issue title, and an exposed release token was used to push an unauthorized version of its CLI. IBM's 2026 breach study found one in four malicious breaches were AI-enabled, up 56% in a year. Small teams rarely have anyone watching for this. That's the gap Canary fills." |
-| 0:30 | A | **Organization** | "Fernwood Labs is a fictional five-person startup. Here's its AI inventory: a coding assistant with auto-install on, and a runtime agent whose version is **Unknown**. Canary never guesses: unknown stays unknown. Two Cybersecurity Leads, Sureh and Koewen, and an Administrator, Wyatt." |
-| 1:00 | A | **Sources** → **Refresh sources now** | "Four curated public sources. Collection is separate from notification. Each source shows its real outcome; an outage shows as **Failed**, never as an empty success." |
-| 1:30 | A | **Alerts** → open the HalluSquatting alert | "Two real reports, from The Hacker News and a CSA research note, are grouped into one finding with both links and dates. The grouping is *proposed*: a person confirms it." |
-| 2:00 | A | Scroll to **Why this may matter** and **Analysis** | "**Possible match**, 65 out of 100, **P2 High**. Every point is explained. It is **not P1**, because P1 needs active exploitation *and* a confirmed match to a critical asset. The analysis keeps source facts, our context, unknowns, and Canary's interpretation separate, and it flags that the two sources disagree about real-world exploitation. A score is triage, not proof of exposure." |
-| 3:15 | A | **Notifications** → **Run processing cycle** | "The P2 alert goes to Sureh's test inbox. All email is labeled as a test, and only allowlisted team addresses can receive it." |
-| 3:30 | C | Refresh the inbox and open the email | "Here it is in a real inbox, tagged `[Canary · Test]`: priority, why it matters, what's known and unknown, and the sources. The footer says it comes from a sample workspace and isn't evidence of an incident." |
-| 4:00 | A | **Send delivery check** to `someone@example.com` | "An address that isn't on the allowlist is **Rejected** before anything is sent." |
-| 4:15 | B | Open the alert → **Assign** to Sureh → **Under investigation** | "Sureh picks it up. Every change is attributed and time-stamped." |
-| 4:45 | B | **Get a step-by-step guide** | "There's no questionnaire to fill in first. Five ordered steps, each with why it matters, what to check, and links. It asks **one** targeted question…" |
-| 5:15 | B | Answer **Unknown** | "…and if we don't know, step 4 stays conditional. Canary doesn't invent the answer." |
-| 5:45 | B | **Create contingency plan** → **Submit for review** | "The guide becomes a plan with only the stages that apply. Koewen owns the permission check. Sureh can recommend it but **can't approve it**." |
-| 6:30 | A | **Plans** → open it → tick the confirmation → **Approve** | "Only the Administrator approves, and approval executes nothing on Fernwood's systems." |
-| 7:00 | A | **Audit** | "Everything is in the history: who assigned it, the guide answer, who approved what, and when." |
-| 7:30 | — | — | "HalluSquatting was only published in July. Fernwood has no security person, and Canary still turned a research article into a P2 alert, a tailored fix guide, and an approved plan in one afternoon." |
+| 0:00 | — | — | "On October 21, PHP shipped emergency fixes for two critical flaws, called PHP2Shell, that let anyone on the internet run code on a PHP server. Within days attackers were trying them, and on November 12 Check Point confirmed real break-ins. A five-person startup has nobody watching for this. Canary does. Everything you'll see is a sample company; the vulnerability and the sources are real." |
+| 0:30 | A | **Organization** | "Fernwood Labs builds an AI bookkeeping product. Customers pay through a billing portal on **PHP 8.3.30**, and it's marked Critical. Canary knows the exact version, because the team recorded it. If they hadn't, it would stay **Unknown** and Canary would never guess." |
+| 1:00 | A | **Sources** → **Refresh sources now** | "Curated public sources: the PHP project, GitHub's advisory database, and security news. Collection runs separately from notifications. Each source shows its real outcome; an outage shows as **Failed**, never as an empty success." |
+| 1:30 | A | **Alerts** → open the **PHP2Shell** alert | "Four reports become one finding. The PHP advisory is the primary record. GitHub's two advisories attach automatically, because the CVE numbers match exactly. The news article only matches by name, so it's a *proposed* grouping that a person confirms." |
+| 2:00 | A | Scroll to **Why this may matter** and **Priority factors** | "It's a **Confirmed match**: 8.3.30 is below 8.3.36, the fix for that branch. The score is **87 out of 100**, which is in P1 range, but it's held at **P2 High**. P1 requires *confirmed* active exploitation, and right now there are only third-party reports of attempts, flagged here as unverified. Every point is explained, and a score is triage, not proof the portal was attacked." |
+| 3:00 | A | **Notifications** → **Run processing cycle (P1/P2)** | "The P2 alert goes to Sureh, the Cybersecurity Lead. Only approved addresses can receive email." |
+| 3:15 | C | Refresh the inbox and open the email | "The P2 email: priority, why it matters to Fernwood, what's known and unknown, and the source links." |
+| 3:40 | A | **Sources** → **Presenter tools** → **Deliver later exploitation report (Check Point)** | "Now it's November 12. Check Point publishes an advisory confirming real attacks." |
+| 4:00 | A | Open the alert again | "Canary escalates on its own: **P1 Critical, 95 out of 100**. The P1 rule is now met, because exploitation is confirmed *and* this is a confirmed match on a critical system. It's marked **Updated evidence**." |
+| 4:15 | C | Refresh the inbox | "And the P1 update email arrived immediately, without waiting for a cycle: 'priority P2 to P1'." |
+| 4:30 | A | Notifications → **Send delivery check** to `someone@example.com` | "An address that isn't approved is **Rejected** before anything is sent." |
+| 4:45 | B | Open the alert → **Assign** to Sureh → **Under investigation** | "Sureh picks it up. Every change is attributed and time-stamped." |
+| 5:15 | B | **Get a step-by-step guide** | "Five ordered steps, each with why it matters, what to check, and links: confirm the version, upgrade to 8.3.36, apply the PHP project's interim setting until then, check for signs of compromise, and rotate keys only if something is found. It asks **one** targeted question…" |
+| 5:45 | B | Answer **Unknown** to "Is the billing portal reachable from the internet?" | "…and if we don't know, the compromise check stays conditional. Canary doesn't invent the answer." |
+| 6:15 | B | **Create contingency plan from this guide** → **Submit for review** | "The guide becomes a plan with only the stages that apply. Koewen owns the interim mitigation and the exposure check. Sureh can recommend the plan but **can't approve it**." |
+| 6:45 | A | **Plans** → open it → tick the confirmation → **Approve** | "Only the Administrator approves, and approval executes nothing on Fernwood's systems." |
+| 7:15 | A | **Audit** | "Everything is on the record: the escalation, the assignment, the guide answer, and who approved what, and when." |
+| 7:40 | — | — | "PHP2Shell went from patch to confirmed attacks in about two weeks. Fernwood has no security person, and Canary matched it to the exact server, held it at P2 until attacks were confirmed, escalated it to P1 the moment they were, and turned it into a fix guide and an approved plan." |
 
 ## Extras if there's time
 
-- **Updated evidence** (Window A, 30s): Sources → **Presenter tools** → **Deliver
-  later follow-up report (Xygeni)** → Notifications → **Run processing cycle**. A
-  third source is attached, the alert shows "Updated evidence", and an
-  **Update** email arrives.
 - **Human correction** (Window B, 30s): on the alert, **Correct** an
   interpretation line with a reason. It shows "Corrected by Sureh", and the
   original text is kept in the history.
 - **Organization isolation** (30s): sign in as `priya` (Prairie Valley Medical
   Center) and paste the Fernwood alert's URL. The response is **Not found**.
-- **Honest failures** (30s): Notifications → **Presenter tools** → **Simulate delivery failure** →
-  **Send delivery check** to the DSU address. It shows **Failed (Simulated)**,
+  Prairie Valley also has no PHP in its inventory, so it gets no alert.
+- **Honest failures** (30s): Notifications → **Presenter tools** → **Simulate
+  delivery failure** → **Send delivery check**. It shows **Failed (Simulated)**,
   and nothing reaches the mail server. Turn the switch off, press **Retry**, and
   it shows **Sent**.
 - **Privacy and data flows** (footer link, 20s): what leaves the machine,
@@ -72,26 +72,30 @@ exposed or compromised.
 
 ## 3-minute version
 
-Hook (0:00) → alert with score and factors (0:30) → Run processing cycle and
-show the inbox (1:15) → Sureh's guide with the Unknown answer (1:45) → Wyatt
-approves the plan (2:30) → takeaway line (2:50). Do the Refresh and the
-assignment before you start talking.
+Hook (0:00) → the alert at 87 held at P2, and why (0:30) → Presenter tools →
+Check Point report → **P1, 95** and the immediate update email (1:15) → Sureh's
+guide with the Unknown answer (2:00) → Wyatt approves the plan (2:30) → takeaway
+(2:50). Do the Refresh and the first processing cycle before you start talking.
 
 ## If something goes wrong
 
 | Problem | Do this |
 |---|---|
-| The email hasn't arrived after about 30 seconds | Check Junk. If it isn't there, show Notifications → delivery log: **Sent**, with the time Gmail accepted it. Say "The mail server accepted it at 3:15 and it hasn't reached the inbox yet. Delivery after that point is outside Canary, and the log shows exactly what happened on our side." Don't guess at the cause; check Junk afterwards. |
+| The email hasn't arrived after about 30 seconds | Check Junk. If it isn't there, show Notifications → delivery log: **Sent**, with the time the mail server accepted it. Say "The mail server accepted it and it hasn't reached the inbox yet. Delivery after that point is outside Canary, and the log shows exactly what happened on our side." Don't guess at the cause. |
 | The delivery log says **Failed** | Don't hide it: "Canary never pretends an email was sent." The error is shown as a type and code only, for example 535 (sign-in refused). Continue the demo. |
-| No internet | Skip the inbox steps. Everything else works offline: the sources are stored copies of the real articles. |
+| No internet | Skip the inbox steps. Everything else works offline: the sources are stored copies of the real advisories and articles. |
 | A page errors or the data gets messy | In the terminal, press Ctrl+C, then run `python run.py --reset` and `python run.py`. It takes about 5 seconds; sign in again in both windows. |
-| The score isn't 65 | It changes after 2027-01-04, as the sources age. Before starting the app, set `CANARY_FIXED_NOW=2026-11-14T15:00:00+00:00` in `.env`. |
+| The alert isn't 87 / P2 after Refresh | You probably delivered the Check Point report already (it's then 95 / P1). Reset and start again. |
 
 ## Things not to say
 
-- That Fernwood (or anyone) was exposed or compromised. It's a *possible* match.
-- "Shadow AI in 43% of breaches." IBM's public material doesn't state it.
-- "4,000 machines compromised" (Cline). That number isn't in Cline's post-mortem.
-- That the issue-title prompt injection is *how* Cline's token was stolen. Cline says it *could* have exposed the token, but doesn't say how the token used on February 17 was obtained.
-- "Six months ago this attack didn't exist." HalluSquatting was published in July 2026, and the wider slopsquatting technique dates back to 2023.
+- That Fernwood's portal was attacked or compromised. It runs an *affected
+  version*; nothing shows it was targeted.
+- "There's no mitigation at all." The PHP project says there are no *complete*
+  mitigations; updating is the only safe choice. The interim setting reduces
+  exposure for one of the two flaws.
+- "CVSS 10." The PHP project rates both flaws 9.2 (CVSS v4.0). Higher scores
+  came from third parties.
+- Specific dates for CISA's known-exploited listing. We didn't verify them
+  against CISA directly.
 - That Canary is HIPAA-compliant, production-ready, or real-time.

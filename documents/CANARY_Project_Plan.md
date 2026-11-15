@@ -631,7 +631,7 @@ the exact behavior and boundaries.
 ### Primary demonstration
 
 Use fictional Fernwood Labs and the hallusquatting flow in
-`documents/hallusquatting-demo-flow.md`. The flow covers organization setup,
+`documents/php2shell-demo-flow.md`. The flow covers organization setup,
 two Cybersecurity Leads, inventory and questionnaire context, source status
 and collection, deduplication, evidence and uncertainty, a P2 Possible match,
 real test email, alert triage, a targeted guide, human-approved plan, audit

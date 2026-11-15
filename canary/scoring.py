@@ -52,6 +52,34 @@ def band(score):
 PRIORITY_LABELS = {"P1": "P1 Critical", "P2": "P2 High", "P3": "P3 Medium", "P4": "P4 Informational"}
 
 
+def _vtuple(version):
+    parts = []
+    for piece in str(version).strip().split("."):
+        digits = "".join(ch for ch in piece if ch.isdigit())
+        parts.append(int(digits) if digits else 0)
+    return tuple(parts + [0] * (3 - len(parts)))
+
+
+def version_affected(version, specs):
+    """True if `version` matches any spec: an exact version ("2.4") or a range (">=8.3.0,<8.3.36")."""
+    v = _vtuple(version)
+    for spec in specs:
+        spec = spec.strip()
+        if not spec.startswith((">", "<", "=")):
+            if spec == str(version).strip():
+                return True
+            continue
+        ok = True
+        for cond in spec.split(","):
+            cond = cond.strip()
+            op = cond[:2] if cond[:2] in (">=", "<=", "==") else cond[:1]
+            bound = _vtuple(cond[len(op):])
+            ok &= {">=": v >= bound, "<=": v <= bound, "==": v == bound, ">": v > bound, "<": v < bound}[op]
+        if ok:
+            return True
+    return False
+
+
 def match_state(finding, inventory, org_industry):
     """Return {"state", "evidence"} for one organization's inventory.
 
@@ -65,9 +93,9 @@ def match_state(finding, inventory, org_industry):
         key, version = item.get("product_key"), item.get("version")
         if key and key in affected:
             versions = affected[key]
-            if version and versions and version in versions:
+            if version and versions and version_affected(version, versions):
                 states.append("confirmed")
-                evidence.append(_ev(item, f"Exact product match; inventory version {version} is listed as affected"))
+                evidence.append(_ev(item, f"Exact product match; inventory version {version} is in the affected range"))
             elif version and versions:
                 continue  # known version, not in affected list: not a match
             else:

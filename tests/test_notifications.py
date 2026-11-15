@@ -79,7 +79,7 @@ def test_p2_is_queued_then_sent_in_next_processing_cycle(nclient, ndb, smtp):
     assert m["msg"]["Subject"].startswith("[CANARY DEMO - TEST] P2")
     body = m["msg"].get_content()
     assert "TEST MODE" in body and "not evidence of an actual incident" in body
-    assert "https://thehackernews.com/2026/07/new-hallusquatting-attack-could-trick.html" in body
+    assert "https://www.php.net/archive/2026.php#2026-10-21-5" in body
 
 
 def test_only_routed_recipient_is_notified(nclient, ndb, smtp):
@@ -170,18 +170,19 @@ def test_unchanged_reassessment_is_suppressed(nclient, ndb, smtp):
     assert len(smtp.messages) == 1
 
 
-def test_followup_evidence_sends_update_notification(nclient, ndb, smtp):
+def test_followup_evidence_escalates_to_p1_and_sends_update_immediately(nclient, ndb, smtp):
     fern = setup_fernwood(nclient, ndb)
     refresh(nclient)
     nclient.post("/notifications/process")
-    nclient.post("/sources/followup")
+    assert smtp.messages[-1]["msg"]["Subject"].startswith("[CANARY DEMO - TEST] P2")
+    nclient.post("/sources/followup")  # Check Point confirms exploitation -> P1; no processing cycle needed
     assert ndb.execute("SELECT COUNT(*) FROM source_items WHERE finding_id="
-                       "(SELECT finding_id FROM alerts WHERE id=?)", (alert_id(ndb, fern),)).fetchone()[0] == 3
+                       "(SELECT finding_id FROM alerts WHERE id=?)", (alert_id(ndb, fern),)).fetchone()[0] == 5
     assert ndb.execute("SELECT has_update FROM alerts WHERE id=?", (alert_id(ndb, fern),)).fetchone()[0] == 1
-    nclient.post("/notifications/process")
     last = rows(ndb)[-1]
-    assert (last["kind"], last["status"]) == ("update", "sent")
-    assert "Update" in smtp.messages[-1]["msg"]["Subject"]
+    assert (last["kind"], last["priority"], last["cadence"], last["status"]) == ("update", "P1", "immediate", "sent")
+    assert smtp.messages[-1]["msg"]["Subject"].startswith("[CANARY DEMO - TEST] Update: P1")
+    assert "priority P2->P1" in smtp.messages[-1]["msg"].get_content()
 
 
 def test_override_requires_reason(nclient, ndb, smtp):
@@ -241,3 +242,15 @@ def test_smtp_password_never_appears_in_pages_or_database(nclient, ndb, smtp):
         assert PASSWORD not in nclient.get(path).data.decode()
     dump = "\n".join(ndb.iterdump())
     assert PASSWORD not in dump
+
+
+def test_queued_p2_is_superseded_when_p1_escalation_is_sent(nclient, ndb, smtp):
+    """Found in the PHP2Shell walkthrough: a still-queued P2 email must not go out after the P1 update."""
+    setup_fernwood(nclient, ndb)
+    refresh(nclient)                      # P2 queued, not yet processed
+    nclient.post("/sources/followup")     # escalates to P1 -> update sent immediately
+    nclient.post("/notifications/process")
+    statuses = [(r["priority"], r["kind"], r["status"]) for r in rows(ndb)]
+    assert statuses == [("P2", "new", "suppressed"), ("P1", "update", "sent")]
+    assert "Superseded" in rows(ndb)[0]["error"]
+    assert [m["msg"]["Subject"][:34] for m in smtp.messages] == ["[CANARY DEMO - TEST] Update: P1 · "]

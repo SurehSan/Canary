@@ -23,12 +23,12 @@ sources of truth are:
   feature requirements and acceptance criteria.
 - [Project plan](CANARY_Project_Plan.md): product intent and one-day prototype
   direction.
-- [Fernwood demo flow](hallusquatting-demo-flow.md): exact walkthrough,
+- [Fernwood demo flow](php2shell-demo-flow.md): exact walkthrough,
   score example, role names, seeded data, and test-email behavior.
 
 The methodology has legacy references to `design/README.md`,
 `demo/hallusquatting-demo-flow.md`, and a mock inbox. The current paths are
-`design/design.md` and `documents/hallusquatting-demo-flow.md`; the current
+`design/design.md` and `documents/php2shell-demo-flow.md`; the current
 notification requirement is real test email restricted to an allowlist of
 team-owned addresses. Follow the design, requirements, and demo flow where
 older methodology text conflicts. At startup, Claude should make a small

@@ -430,8 +430,9 @@ def grouping(alert_id, item_id, action):
     else:
         ts = now_iso()
         new_fid = db.execute(
-            "INSERT INTO findings (title, technique, event_type, technique_tags, industries, identifiers,"
-            " first_seen_at, updated_at) SELECT ?, technique, event_type, technique_tags, industries, ?, ?, ?"
+            "INSERT INTO findings (title, technique, event_type, affected_products, technique_tags, industries,"
+            " identifiers, first_seen_at, updated_at)"
+            " SELECT ?, technique, event_type, affected_products, technique_tags, industries, ?, ?, ?"
             " FROM findings WHERE id=?", (item["title"], item["identifiers"], ts, ts, alert["finding_id"])).lastrowid
         db.execute("UPDATE source_items SET finding_id=?, group_status='primary', group_basis=? WHERE id=?",
                    (new_fid, f"Split from finding #{alert['finding_id']} by {g.user['display_name']}", item_id))
@@ -482,11 +483,12 @@ def followup_evidence():
     """Demo step: a later report arrives and attaches to the existing finding (CAN-REQ-005 update)."""
     db = get_db()
     if not followup_ready(db, g.org["id"]):
-        abort(400, description="Refresh sources first: the follow-up report adds evidence to the HalluSquatting "
+        abort(400, description="Refresh sources first: the follow-up report adds evidence to the PHP2Shell "
                                "finding, which this organization hasn't collected yet.")
     touched = set()
     for raw in FOLLOWUP_ITEMS:
-        fid = ingest_item(db, raw, None, None, source_label="Additional evidence (demo follow-up)", tier="C")
+        fid = ingest_item(db, raw, None, None, source_label=raw.get("label", "Additional evidence (demo follow-up)"),
+                          tier=raw.get("tier", "C"))
         if fid:
             touched.add(fid)
     process_findings(db, touched, actor_label())
