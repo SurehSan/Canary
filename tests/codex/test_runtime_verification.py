@@ -9,7 +9,7 @@ from tests.test_notifications import make_app
 
 FERNWOOD = "Fernwood Labs"
 PRAIRIE = "Prairie Valley Medical Center"
-SUREH_ADDR = "sureh-test@team.example"
+KOEWEN_ADDR = "koewen-test@team.example"  # updated by Claude: alerts now route to Koewen
 # Updated by Claude for the PHP2Shell demo scenario (was the HalluSquatting "what happened" sentence).
 ORIGINAL = ("The PHP project fixed two critical memory-safety flaws that let an unauthenticated attacker run code on "
             "servers running PHP 5.4 through 8.5.")
@@ -72,8 +72,8 @@ def test_corrected_analysis_statement_is_in_followup_update_email(tmp_path):
             db = get_db()
             fern = org_id(db, FERNWOOD)
             login(client, "wyatt", org=fern)
-            sureh = db.execute("SELECT id FROM users WHERE username='sureh'").fetchone()["id"]
-            client.post("/notifications/recipients", data={"user_id": sureh, "email": SUREH_ADDR})
+            koewen = db.execute("SELECT id FROM users WHERE username='koewen'").fetchone()["id"]
+            client.post("/notifications/recipients", data={"user_id": koewen, "email": KOEWEN_ADDR})
             refresh(client)
             alert = db.execute("SELECT id FROM alerts WHERE org_id=?", (fern,)).fetchone()["id"]
             client.post("/notifications/process")

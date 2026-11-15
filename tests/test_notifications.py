@@ -6,7 +6,7 @@ from canary.db import get_db
 from tests.conftest import login, org_id, refresh
 from tests.smtp_capture import CaptureServer
 
-SUREH_ADDR = "sureh-test@team.example"
+KOEWEN_ADDR = "koewen-test@team.example"  # Fernwood routes cybersecurity alerts to Koewen
 WYATT_ADDR = "wyatt-test@team.example"
 PASSWORD = "s3cret-smtp-pw-DO-NOT-LEAK"
 
@@ -24,7 +24,7 @@ def make_app(tmp_path, smtp, **overrides):
         "FIXED_NOW": "2026-11-14T15:00:00+00:00", "RETRY_SLEEP_SECONDS": 0, "START_SCHEDULER": False,
         "SMTP_HOST": "127.0.0.1", "SMTP_PORT": smtp.port, "SMTP_STARTTLS": False, "SMTP_SSL": False,
         "SMTP_USERNAME": "canary", "SMTP_PASSWORD": PASSWORD, "MAIL_FROM": "canary-demo@team.example",
-        "EMAIL_ALLOWLIST": {SUREH_ADDR, WYATT_ADDR}, "LIVE_SOURCES": False, "TEST_RECIPIENTS": {},
+        "EMAIL_ALLOWLIST": {KOEWEN_ADDR, WYATT_ADDR}, "LIVE_SOURCES": False, "TEST_RECIPIENTS": {},
         "ALLOWLIST_DOMAINS": None, "PRESENTATION_MODE": False,
     }
     cfg.update(overrides)
@@ -47,10 +47,10 @@ def ndb(napp):
         yield get_db()
 
 
-def setup_fernwood(client, db, sureh_addr=SUREH_ADDR):
+def setup_fernwood(client, db, koewen_addr=KOEWEN_ADDR):
     fern = org_id(db, "Fernwood Labs")
     login(client, "wyatt", org=fern)
-    for user, addr in (("sureh", sureh_addr), ("wyatt", WYATT_ADDR)):
+    for user, addr in (("koewen", koewen_addr), ("wyatt", WYATT_ADDR)):
         uid = db.execute("SELECT id FROM users WHERE username=?", (user,)).fetchone()["id"]
         client.post("/notifications/recipients", data={"user_id": uid, "email": addr})
     return fern
@@ -73,9 +73,9 @@ def test_p2_is_queued_then_sent_in_next_processing_cycle(nclient, ndb, smtp):
     assert smtp.messages == []
     nclient.post("/notifications/process")
     (n,) = rows(ndb)
-    assert n["status"] == "sent" and n["recipient_email"] == SUREH_ADDR
+    assert n["status"] == "sent" and n["recipient_email"] == KOEWEN_ADDR
     (m,) = smtp.messages
-    assert m["rcpts"] == [SUREH_ADDR]
+    assert m["rcpts"] == [KOEWEN_ADDR]
     assert m["msg"]["Subject"].startswith("[CANARY DEMO - TEST] P2")
     body = m["msg"].get_content()
     assert "TEST MODE" in body and "not evidence of an actual incident" in body
@@ -86,12 +86,12 @@ def test_only_routed_recipient_is_notified(nclient, ndb, smtp):
     setup_fernwood(nclient, ndb)
     refresh(nclient)
     users = {r["user_id"] for r in rows(ndb)}
-    sureh = ndb.execute("SELECT id FROM users WHERE username='sureh'").fetchone()["id"]
-    assert users == {sureh}
+    koewen = ndb.execute("SELECT id FROM users WHERE username='koewen'").fetchone()["id"]
+    assert users == {koewen}
 
 
 def test_non_allowlisted_recipient_is_rejected_before_any_smtp_connection(nclient, ndb, smtp):
-    setup_fernwood(nclient, ndb, sureh_addr="outsider@elsewhere.example")
+    setup_fernwood(nclient, ndb, koewen_addr="outsider@elsewhere.example")
     refresh(nclient)
     nclient.post("/notifications/process")
     (n,) = rows(ndb)
@@ -221,7 +221,7 @@ def test_manual_test_message_to_unlisted_address_is_rejected(nclient, ndb, smtp)
     nclient.post("/notifications/test", data={"email": "random@person.example"})
     (n,) = rows(ndb)
     assert (n["kind"], n["status"]) == ("test", "rejected") and smtp.connections == 0
-    nclient.post("/notifications/test", data={"email": SUREH_ADDR})
+    nclient.post("/notifications/test", data={"email": KOEWEN_ADDR})
     assert rows(ndb)[-1]["status"] == "sent"
 
 
@@ -229,7 +229,7 @@ def test_lead_cannot_change_recipients_or_rules(nclient, ndb, smtp):
     fern = org_id(ndb, "Fernwood Labs")
     login(nclient, "sureh", org=fern)
     sureh = ndb.execute("SELECT id FROM users WHERE username='sureh'").fetchone()["id"]
-    assert nclient.post("/notifications/recipients", data={"user_id": sureh, "email": SUREH_ADDR}).status_code == 403
+    assert nclient.post("/notifications/recipients", data={"user_id": sureh, "email": KOEWEN_ADDR}).status_code == 403
     assert nclient.post("/notifications/rules", data={"user_id": sureh, "category": "cybersecurity"}).status_code == 403
     assert nclient.get("/notifications").status_code == 200
 
